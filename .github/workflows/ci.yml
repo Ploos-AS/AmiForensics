@@ -13,11 +13,24 @@ jobs:
         run: make clean && make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror'
       - name: Static checks
         run: make check
-      - name: Exercise FileInfo
+      - name: Exercise FileInfo human output
         shell: bash
         run: |
           printf '\x00\x00\x03\xF3test' > hunk.bin
           ./FileInfo hunk.bin | tee output.txt
           grep -F 'Size: 8 bytes' output.txt
-          grep -F 'Type: Amiga HUNK executable' output.txt
+          grep -F 'Type: amiga-hunk' output.txt
           grep -E '^CRC32: [0-9A-F]{8}$' output.txt
+          grep -E '^SHA256: [0-9a-f]{64}$' output.txt
+          grep -E '^Byte diversity: [0-9]+/256$' output.txt
+          grep -E '^Packed/compressed hint: (low|possible|high)$' output.txt
+      - name: Exercise FileInfo structured output
+        shell: bash
+        run: |
+          expected="$(sha256sum hunk.bin | awk '{print $1}')"
+          ./FileInfo --kv hunk.bin | tee kv.txt
+          grep -F 'type=amiga-hunk' kv.txt
+          grep -F "sha256=${expected}" kv.txt
+          grep -E '^crc32=[0-9A-F]{8}$' kv.txt
+          grep -E '^byte_diversity=[0-9]+$' kv.txt
+          grep -E '^packed_hint=(low|possible|high)$' kv.txt
