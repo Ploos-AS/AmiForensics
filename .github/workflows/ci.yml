@@ -123,3 +123,13 @@ jobs:
           grep -F 'indicator_trackdisk=yes' bootinfo-kv.txt
           ./BootInfo bootblock-bad.bin | tee bootinfo-bad.txt
           grep -F 'Checksum valid: no' bootinfo-bad.txt
+      - name: Exercise ResidentView host interface
+        shell: bash
+        run: |
+          ./ResidentView | tee residentview.txt
+          grep -F 'ResidentView snapshot' residentview.txt
+          grep -F 'host-stub' residentview.txt
+          ./ResidentView --kv | tee residentview-kv.txt
+          grep -F 'tool=ResidentView' residentview-kv.txt
+          grep -F 'record.0.kind=host-stub' residentview-kv.txt
+          grep -F 'truncated=false' residentview-kv.txt
