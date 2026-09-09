@@ -2,7 +2,7 @@ CC ?= m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings
+TARGETS := FileInfo Strings HunkInfo
 
 .PHONY: all clean check
 
@@ -14,11 +14,16 @@ FileInfo: src/fileinfo.c
 Strings: src/strings.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
+HunkInfo: src/hunkinfo.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
 check:
 	@grep -q 'HUNK_HEADER' src/fileinfo.c
 	@grep -q 'crc32_update' src/fileinfo.c
 	@grep -q 'classify_indicator' src/strings.c
 	@grep -q 'trackdisk.device' src/strings.c
+	@grep -q 'parse_reloc' src/hunkinfo.c
+	@grep -q 'parse_symbols' src/hunkinfo.c
 	@echo "static checks: PASS"
 
 clean:
