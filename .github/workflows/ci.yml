@@ -1,0 +1,23 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  fileinfo-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build host smoke binary
+        run: make clean && make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror'
+      - name: Static checks
+        run: make check
+      - name: Exercise FileInfo
+        shell: bash
+        run: |
+          printf '\x00\x00\x03\xF3test' > hunk.bin
+          ./FileInfo hunk.bin | tee output.txt
+          grep -F 'Size: 8 bytes' output.txt
+          grep -F 'Type: Amiga HUNK executable' output.txt
+          grep -E '^CRC32: [0-9A-F]{8}$' output.txt
