@@ -7,7 +7,10 @@ OUT_DIR="${1:-build/fs-uae/aros-system}"
 mkdir -p "$OUT_DIR"
 index_html="$OUT_DIR/aros-nightly-index.html"
 
-curl --fail --location --retry 3 --retry-delay 2 "$AROS_INDEX_URL" -o "$index_html"
+CURL_COMMON=(--fail --location --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 180)
+
+echo "AROS_FETCH_PHASE=index" >&2
+curl "${CURL_COMMON[@]}" "$AROS_INDEX_URL" -o "$index_html"
 AROS_URL="$(
   { grep -oE 'href="[^"]*amiga-m68k-boot-iso[^"]*"' "$index_html" || true; } \
     | head -n 1 \
@@ -24,12 +27,17 @@ url_path="${AROS_URL%%\?*}"
 if [[ "$url_path" == */download ]]; then AROS_ARCHIVE="$(basename "$(dirname "$url_path")")"; else AROS_ARCHIVE="$(basename "$url_path")"; fi
 [[ "$AROS_ARCHIVE" == *"$AROS_TARGET"* ]] || { echo "ERROR: unexpected AROS archive: $AROS_ARCHIVE" >&2; exit 1; }
 archive="$OUT_DIR/$AROS_ARCHIVE"
-curl --fail --location --retry 3 --retry-delay 2 "$AROS_URL" -o "$archive"
+echo "AROS_FETCH_PHASE=archive" >&2
+if ! timeout --signal=TERM 210s curl "${CURL_COMMON[@]}" "$AROS_URL" -o "$archive"; then
+  echo "ERROR: AROS archive download timed out or failed" >&2
+  exit 1
+fi
 sha256sum "$archive" | tee "$OUT_DIR/archive.sha256"
 rm -rf "$OUT_DIR/archive-extracted"; mkdir -p "$OUT_DIR/archive-extracted"
+echo "AROS_FETCH_PHASE=extract" >&2
 case "$AROS_ARCHIVE" in
-  *.lha|*.LHA) lha xw="$OUT_DIR/archive-extracted" "$archive" >/dev/null ;;
-  *.zip|*.ZIP) unzip -q "$archive" -d "$OUT_DIR/archive-extracted" ;;
+  *.lha|*.LHA) timeout --signal=TERM 120s lha xw="$OUT_DIR/archive-extracted" "$archive" >/dev/null ;;
+  *.zip|*.ZIP) timeout --signal=TERM 120s unzip -q "$archive" -d "$OUT_DIR/archive-extracted" ;;
   *) echo "ERROR: unsupported AROS archive format" >&2; exit 1 ;;
 esac
 iso="$(find "$OUT_DIR/archive-extracted" -type f \( -iname '*.iso' -o -iname '*.ISO' \) -print -quit)"
