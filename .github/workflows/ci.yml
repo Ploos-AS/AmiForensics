@@ -47,3 +47,36 @@ jobs:
           ./Strings --indicators strings.bin | tee indicators.txt
           ! grep -F 'noise' indicators.txt
           grep -F 'exec.library' indicators.txt
+      - name: Exercise HunkInfo
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import struct
+          words = [
+              1011, 0,        # HUNK_HEADER, no resident names
+              1, 0, 0,       # table size, first, last
+              1,             # declared segment size: 1 long
+              1001, 1,       # HUNK_CODE, 1 long
+              0x4E714E75,    # NOP; RTS
+              1004,          # HUNK_RELOC32
+              1, 0, 0,       # one relocation, target 0, offset 0
+              0,             # relocation terminator
+              1008,          # HUNK_SYMBOL
+              1, 0x54455354, 0, # name TEST, value 0
+              0,             # symbol terminator
+              1009, 1, 0,    # HUNK_DEBUG, 1 long payload
+              1010            # HUNK_END
+          ]
+          with open('valid.hunk', 'wb') as f:
+              for w in words:
+                  f.write(struct.pack('>I', w))
+          with open('truncated.hunk', 'wb') as f:
+              f.write(struct.pack('>II', 1011, 0))
+          PY
+          ./HunkInfo valid.hunk | tee hunkinfo.txt
+          grep -F 'Header: HUNK_HEADER' hunkinfo.txt
+          grep -F 'CODE bytes: 4' hunkinfo.txt
+          grep -F 'RELOC32 entries: 1' hunkinfo.txt
+          grep -F 'Symbols: 1' hunkinfo.txt
+          grep -F 'DEBUG hunks: 1' hunkinfo.txt
+          ! ./HunkInfo truncated.hunk
