@@ -28,10 +28,16 @@ Run >NIL: RAM:ResidentView --serve
 RX RAM:ResidentView.rexx
 ```
 
-6. Inspect/copy out:
+6. Copy the result back to the host:
 
 ```text
 RAM:m2_1d_residentview_result.txt
+```
+
+7. Validate it from the repository root:
+
+```sh
+bash ci/local/m2-1d/validate-result.sh m2_1d_residentview_result.txt
 ```
 
 A PASS requires all of the following:
@@ -42,10 +48,22 @@ A PASS requires all of the following:
 - `LIST RESIDENTS` returned at least one `resident|...` record
 - `QUIT_RC=0`
 - `QUIT_RESULT=BYE`
-- final `STATUS=PASS`
+- guest `STATUS=PASS`
+- host validator `STATUS=PASS`
+
+## Evidence
+
+Record the complete guest result and validator output in `docs/M2_1D_QUALIFICATION.md`, together with:
+
+- exact Git commit
+- Kickstart and Workbench versions
+- CPU/machine profile
+- FS-UAE version
+- ResidentView-ARexx SHA-256
+- RexxMast/rexxsyslib versions where available
 
 ## Scope
 
-This test qualifies live ARexx message exchange and ResidentView resident enumeration in the tested AmigaOS environment. Record the exact Kickstart/Workbench versions, CPU profile, FS-UAE version, binary SHA-256 and complete result file in `docs/M2_1D_QUALIFICATION.md`.
+This test qualifies live ARexx message exchange and ResidentView resident enumeration in the tested AmigaOS environment.
 
 Do not treat the AROS preflight as an ARexx runtime PASS: the tested AROS nightly included `rexxsyslib.library` and `RX` but did not include RexxMast.
