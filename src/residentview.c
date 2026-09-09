@@ -158,6 +158,7 @@ static void print_kv(const RVSnapshot *s, const char *filter)
     printf("truncated=%s\n", s->truncated ? "true" : "false");
 }
 
+#ifndef RV_NO_AREXX
 static int append_text(char *dst, size_t cap, size_t *used, const char *text)
 {
     size_t n = strlen(text);
@@ -203,6 +204,7 @@ static const char *command_filter(const char *cmd)
     if (strcmp(cmd, "LIST RESIDENTS") == 0) return "residents";
     return NULL;
 }
+#endif
 
 #if (defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)) && !defined(RV_NO_AREXX)
 static void reply_rexx(struct RexxMsg *msg, long rc, const char *result, long error_code)
