@@ -10,6 +10,7 @@ Unlike the M1 tools, this utility reads live Exec state. It is therefore impleme
 
 The Amiga-native path snapshots:
 
+- resident modules from `ExecBase->ResModules`
 - loaded libraries
 - devices
 - public message ports
@@ -18,74 +19,90 @@ The Amiga-native path snapshots:
 - waiting tasks
 - the currently running task
 
-Each record carries a kind, address, priority, name and (for library-compatible records) version/revision data.
+Each record carries a kind, address, priority, name and version data where available.
+
+## Resident modules
+
+`ExecBase->ResModules` is treated as the NULL-terminated array of `struct Resident *` described by classic Exec documentation.
+
+Each candidate is accepted only when:
+
+- `rt_MatchWord == RTC_MATCHWORD` (`0x4AFC`)
+- `rt_MatchTag` points back to the same `struct Resident`
+
+Resident name, priority and version are copied into the local snapshot while task scheduling is forbidden. No resident initialization code is called.
 
 ## Snapshot safety
 
 Exec lists can change while they are being inspected.
 
-`ResidentView` therefore uses a short `Forbid()` / `Permit()` window to copy list data into a fixed local snapshot. Console output happens after `Permit()` so the tool does not hold task scheduling disabled while performing I/O.
+`ResidentView` therefore uses a short `Forbid()` / `Permit()` window to copy list data into a fixed local snapshot. Console output and ARexx result formatting happen after `Permit()` so the tool does not hold task scheduling disabled while performing I/O.
 
 The current fixed snapshot capacity is 192 records. If that capacity is exceeded, output is explicitly marked truncated and the program returns a warning status.
 
-## Output
+## CLI output
 
 Human-readable output is the default.
 
 `--kv` emits normalized key/value records suitable for scripts, ARexx wrappers and the later workstation/report pipeline.
 
-`--kind` filters output. Supported filters currently include:
+`--kind` supports singular and convenient plural filters, including:
 
 - `all`
-- `library`
-- `device`
-- `port`
-- `resource`
+- `resident` / `residents`
+- `library` / `libraries`
+- `device` / `devices`
+- `port` / `ports`
+- `resource` / `resources`
 - `tasks`
 - `task-ready`
 - `task-wait`
 - `task-running`
 
-## Resident modules
+## ARexx service
 
-Despite the tool name, direct enumeration of Exec resident-module structures is intentionally not claimed in this first slice.
+M2.1b adds a persistent ARexx service mode:
 
-The exact `ExecBase` resident-module representation and traversal rules must be verified against the target SDK/runtime before following resident pointer structures. This is safer than assuming a layout and potentially walking invalid memory.
+```text
+ResidentView --serve
+ResidentView --serve CUSTOM.PORT
+```
 
-Resident-module enumeration remains part of M2.1 follow-up work.
+The default public port name is `RESIDENTVIEW`.
 
-## ARexx
+Implemented commands:
 
-ResidentView is a strong candidate for a real ARexx service interface because repeated live queries benefit from a persistent command endpoint.
-
-The implementation is structured so snapshot collection and formatting are independent of CLI parsing. A later M2.1 follow-up can add an ARexx port without duplicating inspection logic.
-
-Candidate commands:
-
-- `PING`
+- `PING` -> `PONG`
 - `SNAPSHOT`
+- `LIST ALL`
 - `LIST LIBRARIES`
 - `LIST DEVICES`
 - `LIST PORTS`
 - `LIST TASKS`
 - `LIST RESOURCES`
 - `LIST RESIDENTS`
-- `QUIT`
+- `QUIT` -> `BYE`
 
-The ARexx port is not yet implemented in this slice and must not be reported as available.
+Snapshot/list commands return newline-separated records when the caller requests an ARexx result. The service opens `rexxsyslib.library`, creates one public Exec message port and replies to incoming `RexxMsg` messages. Unknown commands return an error rather than being silently ignored.
+
+The ARexx server reuses the same `take_snapshot()` and filtering logic as the CLI. There is no second inspection implementation.
 
 ## Host CI
 
-The non-Amiga build uses a clearly labelled host stub. It exists only to test shared CLI parsing and output formatting in GitHub Actions.
+The non-Amiga build uses clearly labelled stubs. It exists only to test shared CLI parsing, resident filtering, service-mode selection and output formatting in GitHub Actions.
 
-Host CI does **not** validate access to Exec lists.
+Host CI does **not** validate `ExecBase->ResModules`, Exec list traversal, `rexxsyslib.library`, public-port registration or actual ARexx message exchange.
 
 ## Qualification status
 
 - snapshot/output source: implemented
-- host compile and interface smoke test: configured
+- direct resident-module enumeration: implemented
+- ARexx service source: implemented
+- host compile/interface smoke test: configured
 - m68k-amigaos-gcc build: not yet qualified
-- Exec list snapshot on AmigaOS 2.04+: not yet qualified
-- direct resident-module enumeration: deferred
-- ARexx service port: deferred
+- Exec snapshot on AmigaOS 2.04+: not yet qualified
+- resident enumeration on AmigaOS 2.04+: not yet qualified
+- live ARexx message exchange: not yet qualified
 - FS-UAE/AROS runtime: not yet qualified
+
+The next qualification step should build the Amiga binary with the project toolchain and exercise both CLI snapshot output and the `RESIDENTVIEW` ARexx port under FS-UAE/AROS before M2.1 is called runtime-qualified.
