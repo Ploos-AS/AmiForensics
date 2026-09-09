@@ -12,22 +12,42 @@ Current implementation is deliberately read-only and does not execute the target
 - binary file reading
 - file size reporting
 - CRC32 fingerprint
+- self-contained SHA-256 fingerprinting with no external crypto dependency
 - Amiga HUNK header recognition (`HUNK_HEADER`)
 - basic Amiga DOS disk/bootblock-data recognition
+- byte-diversity metric
+- conservative packed/compressed-data hint (`low`, `possible`, `high`)
+- stable key/value output via `--kv`
 - non-zero DOS-style return codes for usage/open/read failures
-- host-side CI compile and smoke test
+- host-side CI compile and smoke tests for both human and structured output
 
-## Deferred within FileInfo
+## Structured output
 
-- stronger cryptographic hashes
-- detailed HUNK classification
-- library/device/executable heuristics beyond HUNK recognition
-- packed/crunched-data indicators
-- entropy metrics
-- shared machine-readable output schema
+`FileInfo --kv <file>` currently emits one stable `key=value` field per line:
+
+- `file`
+- `size`
+- `crc32`
+- `sha256`
+- `type`
+- `byte_diversity`
+- `packed_hint`
+
+This intentionally avoids requiring a JSON library on the native Amiga tool. A workstation-side layer can translate the stable native format into the common AmiForensics JSON report schema later.
+
+## Analysis note
+
+`packed_hint` is a triage heuristic based on byte diversity, not a malware verdict and not proof that a file is packed or compressed. It should only influence analyst prioritization.
+
+## Still deferred within FileInfo
+
+- full HUNK structural parsing (belongs primarily in `HunkInfo`)
+- library/device/executable subtype heuristics beyond the initial classification
+- true Shannon entropy or block-wise entropy view
 - richer indicator extraction
+- common workstation-side JSON schema
 
-These are intended to be added incrementally before FileInfo is considered feature-complete for the first public release.
+These can be added incrementally without turning FileInfo into a replacement for the specialized analyzers.
 
 ## ARexx decision
 
@@ -38,7 +58,7 @@ A dedicated ARexx interface remains an option if batch/persistent operation late
 ## Qualification status
 
 - Source/build structure: implemented
-- Host compile/smoke CI: configured
+- Host compile/smoke CI: configured and expanded for SHA-256 / `--kv`
 - m68k-amigaos-gcc build: not yet qualified in this milestone
 - AmigaOS 2.04 runtime: not yet qualified
 - FS-UAE/AROS runtime: not yet qualified
