@@ -48,10 +48,12 @@ static void add_record(RVSnapshot *s, const char *kind, const char *name,
 #include <exec/tasks.h>
 #include <exec/ports.h>
 #include <exec/resident.h>
+#include <proto/exec.h>
+#ifndef RV_NO_AREXX
 #include <rexx/storage.h>
 #include <rexx/rxslib.h>
-#include <proto/exec.h>
 #include <proto/rexxsyslib.h>
+#endif
 
 extern struct ExecBase *SysBase;
 
@@ -202,7 +204,7 @@ static const char *command_filter(const char *cmd)
     return NULL;
 }
 
-#if defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
+#if (defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)) && !defined(RV_NO_AREXX)
 static void reply_rexx(struct RexxMsg *msg, long rc, const char *result, long error_code)
 {
     msg->rm_Result1 = rc; msg->rm_Result2 = 0;
@@ -251,6 +253,13 @@ static int serve_arexx(const char *port_name)
         }
     }
     RemPort(port); DeleteMsgPort(port); CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 0;
+}
+#elif defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
+static int serve_arexx(const char *port_name)
+{
+    (void)port_name;
+    fprintf(stderr, "ResidentView: ARexx support not included in this build\n");
+    return 20;
 }
 #else
 static int serve_arexx(const char *port_name)
