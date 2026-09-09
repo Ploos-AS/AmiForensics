@@ -5,11 +5,11 @@ on:
   pull_request:
 
 jobs:
-  fileinfo-smoke:
+  static-tools-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build host smoke binary
+      - name: Build host smoke binaries
         run: make clean && make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror'
       - name: Static checks
         run: make check
@@ -34,3 +34,16 @@ jobs:
           grep -E '^crc32=[0-9A-F]{8}$' kv.txt
           grep -E '^byte_diversity=[0-9]+$' kv.txt
           grep -E '^packed_hint=(low|possible|high)$' kv.txt
+      - name: Exercise Strings
+        shell: bash
+        run: |
+          printf 'noise\0exec.library\0trackdisk.device\0S:Startup-Sequence\0http://example.invalid/x\0REXXMAST\0' > strings.bin
+          ./Strings strings.bin | tee strings.txt
+          grep -F 'library' strings.txt
+          grep -F 'trackdisk.device' strings.txt
+          grep -F 'amiga-path-or-port' strings.txt
+          grep -F 'network' strings.txt
+          grep -F 'arexx' strings.txt
+          ./Strings --indicators strings.bin | tee indicators.txt
+          ! grep -F 'noise' indicators.txt
+          grep -F 'exec.library' indicators.txt
