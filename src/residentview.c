@@ -220,16 +220,35 @@ static void reply_rexx(struct RexxMsg *msg, long rc, const char *result, long er
 static int serve_arexx(const char *port_name)
 {
     struct MsgPort *port; int quitting = 0;
+    RVSnapshot *snapshot = NULL;
+    char *result = NULL;
+
+    snapshot = (RVSnapshot *)malloc(sizeof(*snapshot));
+    result = (char *)malloc(RV_RESULT_LEN);
+    if (snapshot == NULL || result == NULL) {
+        free(result);
+        free(snapshot);
+        fprintf(stderr, "ResidentView: out of memory\n");
+        return 20;
+    }
+
     RexxSysBase = (void *)OpenLibrary((CONST_STRPTR)"rexxsyslib.library", 0);
-    if (RexxSysBase == NULL) { fprintf(stderr, "ResidentView: cannot open rexxsyslib.library\n"); return 20; }
+    if (RexxSysBase == NULL) {
+        free(result); free(snapshot);
+        fprintf(stderr, "ResidentView: cannot open rexxsyslib.library\n"); return 20;
+    }
     Forbid();
     if (FindPort((CONST_STRPTR)port_name) != NULL) {
         Permit(); fprintf(stderr, "ResidentView: ARexx port '%s' already exists\n", port_name);
-        CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 20;
+        CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL;
+        free(result); free(snapshot); return 20;
     }
     Permit();
     port = CreateMsgPort();
-    if (port == NULL) { CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 20; }
+    if (port == NULL) {
+        CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL;
+        free(result); free(snapshot); return 20;
+    }
     port->mp_Node.ln_Name = (char *)port_name; AddPort(port);
     printf("ResidentView ARexx port: %s\n", port_name);
     while (!quitting) {
@@ -244,17 +263,17 @@ static int serve_arexx(const char *port_name)
             if (strcmp(cmd, "QUIT") == 0) { reply_rexx(msg, 0, "BYE", 0); quitting = 1; continue; }
             filter = command_filter(cmd);
             if (filter != NULL) {
-                RVSnapshot snapshot; char result[RV_RESULT_LEN];
-                snapshot_init(&snapshot); take_snapshot(&snapshot);
-                if (!snapshot_to_text(&snapshot, filter, result, sizeof(result))) reply_rexx(msg, 5, NULL, 2);
-                else if (snapshot.truncated) reply_rexx(msg, 5, NULL, 3);
+                snapshot_init(snapshot); take_snapshot(snapshot);
+                if (!snapshot_to_text(snapshot, filter, result, RV_RESULT_LEN)) reply_rexx(msg, 5, NULL, 2);
+                else if (snapshot->truncated) reply_rexx(msg, 5, NULL, 3);
                 else reply_rexx(msg, 0, result, 0);
                 continue;
             }
             reply_rexx(msg, 10, NULL, 1);
         }
     }
-    RemPort(port); DeleteMsgPort(port); CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 0;
+    RemPort(port); DeleteMsgPort(port); CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL;
+    free(result); free(snapshot); return 0;
 }
 #elif defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
 static int serve_arexx(const char *port_name)
@@ -281,7 +300,7 @@ static void usage(const char *prog)
 
 int main(int argc, char **argv)
 {
-    RVSnapshot snapshot; const char *filter = "all"; int kv = 0, i;
+    RVSnapshot *snapshot; const char *filter = "all"; int kv = 0, i, rc;
     if (argc >= 2 && strcmp(argv[1], "--serve") == 0) {
         const char *port = (argc >= 3) ? argv[2] : RV_DEFAULT_PORT;
         if (argc > 3) { usage(argv[0]); return 10; }
@@ -292,7 +311,14 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--kind") == 0 && i + 1 < argc) filter = argv[++i];
         else { usage(argv[0]); return 10; }
     }
-    snapshot_init(&snapshot); take_snapshot(&snapshot);
-    if (kv) print_kv(&snapshot, filter); else print_human(&snapshot, filter);
-    return snapshot.truncated ? 5 : 0;
+    snapshot = (RVSnapshot *)malloc(sizeof(*snapshot));
+    if (snapshot == NULL) {
+        fprintf(stderr, "ResidentView: out of memory\n");
+        return 20;
+    }
+    snapshot_init(snapshot); take_snapshot(snapshot);
+    if (kv) print_kv(snapshot, filter); else print_human(snapshot, filter);
+    rc = snapshot->truncated ? 5 : 0;
+    free(snapshot);
+    return rc;
 }
