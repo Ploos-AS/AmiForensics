@@ -1,0 +1,46 @@
+name: M2.1d ResidentView ARexx preflight
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/residentview.c'
+      - 'ci/fs-uae/build-native-arexx.sh'
+      - 'ci/fs-uae/probe-aros-rexx.sh'
+      - 'ci/fs-uae/fetch-aros-system.sh'
+      - '.github/workflows/m2-1d-arexx.yml'
+  workflow_dispatch:
+
+jobs:
+  residentview-arexx-preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AROS inspection tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl lhasa p7zip-full unzip file
+
+      - name: Gate 1 - build ARexx-enabled ResidentView
+        run: bash ci/fs-uae/build-native-arexx.sh
+
+      - name: Gate 2 - inspect AROS image for ARexx runtime
+        run: bash ci/fs-uae/probe-aros-rexx.sh
+
+      - name: Upload M2.1d preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-1d-residentview-arexx-preflight
+          path: |
+            build/fs-uae/native-arexx/ResidentView-ARexx
+            build/fs-uae/native-arexx/ResidentView-ARexx.sha256
+            build/fs-uae/native-arexx/file.txt
+            build/fs-uae/native-arexx/result.txt
+            build/fs-uae/native-arexx/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-rexx-probe/paths.txt
+            build/fs-uae/aros-rexx-probe/provenance.txt
+            build/fs-uae/aros-rexx-probe/result.txt
