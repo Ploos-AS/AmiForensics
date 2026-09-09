@@ -54,13 +54,12 @@ static void add_record(RVSnapshot *s, const char *kind, const char *name,
 #include <proto/rexxsyslib.h>
 
 extern struct ExecBase *SysBase;
-struct Library *RexxSysBase = NULL;
 
 static void snapshot_node_list(RVSnapshot *s, struct List *list, const char *kind)
 {
     struct Node *node;
     for (node = list->lh_Head; node != NULL && node->ln_Succ != NULL; node = node->ln_Succ)
-        add_record(s, kind, node->ln_Name, (unsigned long)node, (long)node->ln_Pri, 0);
+        add_record(s, kind, (const char *)node->ln_Name, (unsigned long)node, (long)node->ln_Pri, 0);
 }
 
 static void snapshot_library_list(RVSnapshot *s, struct List *list, const char *kind)
@@ -69,7 +68,7 @@ static void snapshot_library_list(RVSnapshot *s, struct List *list, const char *
     for (lib = (struct Library *)list->lh_Head;
          lib != NULL && lib->lib_Node.ln_Succ != NULL;
          lib = (struct Library *)lib->lib_Node.ln_Succ)
-        add_record(s, kind, lib->lib_Node.ln_Name, (unsigned long)lib,
+        add_record(s, kind, (const char *)lib->lib_Node.ln_Name, (unsigned long)lib,
                    (long)lib->lib_Node.ln_Pri,
                    ((unsigned long)lib->lib_Version << 16) | (unsigned long)lib->lib_Revision);
 }
@@ -82,7 +81,7 @@ static void snapshot_residents(RVSnapshot *s)
     for (i = 0; mods[i] != NULL && i < 256; ++i) {
         struct Resident *r = mods[i];
         if (r->rt_MatchWord != RTC_MATCHWORD || r->rt_MatchTag != r) continue;
-        add_record(s, "resident", r->rt_Name, (unsigned long)r,
+        add_record(s, "resident", (const char *)r->rt_Name, (unsigned long)r,
                    (long)r->rt_Pri, ((unsigned long)r->rt_Version << 16));
     }
 }
@@ -100,7 +99,7 @@ static void take_snapshot(RVSnapshot *s)
     snapshot_node_list(s, &SysBase->TaskWait, "task-wait");
     current = FindTask(NULL);
     if (current != NULL)
-        add_record(s, "task-running", current->tc_Node.ln_Name,
+        add_record(s, "task-running", (const char *)current->tc_Node.ln_Name,
                    (unsigned long)current, (long)current->tc_Node.ln_Pri, 0);
     Permit();
 }
@@ -217,17 +216,17 @@ static void reply_rexx(struct RexxMsg *msg, long rc, const char *result, long er
 static int serve_arexx(const char *port_name)
 {
     struct MsgPort *port; int quitting = 0;
-    RexxSysBase = OpenLibrary("rexxsyslib.library", 0);
+    RexxSysBase = (void *)OpenLibrary((CONST_STRPTR)"rexxsyslib.library", 0);
     if (RexxSysBase == NULL) { fprintf(stderr, "ResidentView: cannot open rexxsyslib.library\n"); return 20; }
     Forbid();
-    if (FindPort((STRPTR)port_name) != NULL) {
+    if (FindPort((CONST_STRPTR)port_name) != NULL) {
         Permit(); fprintf(stderr, "ResidentView: ARexx port '%s' already exists\n", port_name);
-        CloseLibrary(RexxSysBase); RexxSysBase = NULL; return 20;
+        CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 20;
     }
     Permit();
     port = CreateMsgPort();
-    if (port == NULL) { CloseLibrary(RexxSysBase); RexxSysBase = NULL; return 20; }
-    port->mp_Node.ln_Name = (STRPTR)port_name; AddPort(port);
+    if (port == NULL) { CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 20; }
+    port->mp_Node.ln_Name = (char *)port_name; AddPort(port);
     printf("ResidentView ARexx port: %s\n", port_name);
     while (!quitting) {
         struct RexxMsg *msg; ULONG sigmask = 1UL << port->mp_SigBit;
@@ -236,7 +235,7 @@ static int serve_arexx(const char *port_name)
         while ((msg = (struct RexxMsg *)GetMsg(port)) != NULL) {
             char cmd[96]; const char *filter;
             if (!IsRexxMsg(msg) || msg->rm_Args[0] == NULL) { reply_rexx(msg, 10, NULL, 1); continue; }
-            normalize_command(msg->rm_Args[0], cmd, sizeof(cmd));
+            normalize_command((const char *)msg->rm_Args[0], cmd, sizeof(cmd));
             if (strcmp(cmd, "PING") == 0) { reply_rexx(msg, 0, "PONG", 0); continue; }
             if (strcmp(cmd, "QUIT") == 0) { reply_rexx(msg, 0, "BYE", 0); quitting = 1; continue; }
             filter = command_filter(cmd);
@@ -251,7 +250,7 @@ static int serve_arexx(const char *port_name)
             reply_rexx(msg, 10, NULL, 1);
         }
     }
-    RemPort(port); DeleteMsgPort(port); CloseLibrary(RexxSysBase); RexxSysBase = NULL; return 0;
+    RemPort(port); DeleteMsgPort(port); CloseLibrary((struct Library *)RexxSysBase); RexxSysBase = NULL; return 0;
 }
 #else
 static int serve_arexx(const char *port_name)
