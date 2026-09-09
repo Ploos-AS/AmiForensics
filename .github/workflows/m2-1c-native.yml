@@ -1,0 +1,33 @@
+name: M2.1c native qualification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  residentview-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ResidentView with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native.sh
+
+      - name: Upload native qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-1c-native-qualification
+          path: |
+            build/fs-uae/native/ResidentView
+            build/fs-uae/native/ResidentView.sha256
+            build/fs-uae/native/file.txt
+            build/fs-uae/native/result.txt
+            build/fs-uae/native/toolchain-image.txt
+          if-no-files-found: warn
