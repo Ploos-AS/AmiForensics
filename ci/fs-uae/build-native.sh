@@ -13,7 +13,7 @@ docker run --rm \
   -w /work \
   "$IMAGE" \
   m68k-amigaos-gcc \
-    -Os -Wall -Wextra -Werror -m68000 \
+    -Os -Wall -Wextra -Werror -m68000 -DRV_NO_AREXX=1 \
     -o ResidentView \
     src/residentview.c \
     -mcrt=nix20
@@ -27,5 +27,5 @@ if ! grep -Eiq 'AmigaOS|Amiga.*executable|loadseg' "$OUT_DIR/file.txt"; then
   exit 1
 fi
 
-printf 'STATUS=PASS\nGATE=M2_1C_NATIVE_BEBBO_BUILD\nIMAGE=%s\nBINARY=%s\n' \
+printf 'STATUS=PASS\nGATE=M2_1C_NATIVE_BEBBO_BUILD\nMODE=CLI_NO_AREXX_AUTOINIT\nIMAGE=%s\nBINARY=%s\n' \
   "$IMAGE" "$OUT_DIR/ResidentView" | tee "$OUT_DIR/result.txt"
