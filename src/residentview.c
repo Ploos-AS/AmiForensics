@@ -45,7 +45,7 @@ static void add_record(RVSnapshot *s, const char *kind, const char *name,
     r->version = version;
 }
 
-#ifdef __amigaos__
+#if defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
 #include <exec/execbase.h>
 #include <exec/lists.h>
 #include <exec/nodes.h>
