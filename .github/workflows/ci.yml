@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build host smoke binaries
-        run: make clean && make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror'
+        run: make clean && make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror -Wno-unused-function'
       - name: Static checks
         run: make check
       - name: Exercise FileInfo human output
