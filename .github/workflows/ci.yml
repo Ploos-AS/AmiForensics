@@ -52,26 +52,10 @@ jobs:
         run: |
           python3 - <<'PY'
           import struct
-          words = [
-              1011, 0,
-              1, 0, 0,
-              1,
-              1001, 1,
-              0x4E714E75,
-              1004,
-              1, 0, 0,
-              0,
-              1008,
-              1, 0x54455354, 0,
-              0,
-              1009, 1, 0,
-              1010
-          ]
+          words = [1011,0,1,0,0,1,1001,1,0x4E714E75,1004,1,0,0,0,1008,1,0x54455354,0,0,1009,1,0,1010]
           with open('valid.hunk', 'wb') as f:
-              for w in words:
-                  f.write(struct.pack('>I', w))
-          with open('truncated.hunk', 'wb') as f:
-              f.write(struct.pack('>II', 1011, 0))
+              for w in words: f.write(struct.pack('>I', w))
+          with open('truncated.hunk', 'wb') as f: f.write(struct.pack('>II', 1011, 0))
           PY
           ./HunkInfo valid.hunk | tee hunkinfo.txt
           grep -F 'Header: HUNK_HEADER' hunkinfo.txt
@@ -85,30 +69,21 @@ jobs:
         run: |
           python3 - <<'PY'
           import struct
-
           data = bytearray(1024)
           data[0:4] = b'DOS\x00'
           data[8:12] = struct.pack('>I', 880)
           marker = b'trackdisk.device\x00exec.library\x00'
           data[12:12+len(marker)] = marker
-
           def add_end_around(sum_, value):
               total = sum_ + value
               return (total & 0xffffffff) + (1 if total > 0xffffffff else 0)
-
           s = 0
           for off in range(0, 1024, 4):
-              if off == 4:
-                  value = 0
-              else:
-                  value = struct.unpack('>I', data[off:off+4])[0]
+              value = 0 if off == 4 else struct.unpack('>I', data[off:off+4])[0]
               s = add_end_around(s, value)
-          checksum = (~s) & 0xffffffff
-          data[4:8] = struct.pack('>I', checksum)
+          data[4:8] = struct.pack('>I', (~s) & 0xffffffff)
           open('bootblock.bin', 'wb').write(data)
-
-          broken = bytearray(data)
-          broken[100] ^= 0x01
+          broken = bytearray(data); broken[100] ^= 0x01
           open('bootblock-bad.bin', 'wb').write(broken)
           PY
           ./BootInfo bootblock.bin | tee bootinfo.txt
@@ -133,3 +108,8 @@ jobs:
           grep -F 'tool=ResidentView' residentview-kv.txt
           grep -F 'record.0.kind=host-stub' residentview-kv.txt
           grep -F 'truncated=false' residentview-kv.txt
+          ./ResidentView --kind residents | tee residents.txt
+          grep -F 'host-resident-stub' residents.txt
+          ./ResidentView --serve TEST.RESIDENTVIEW | tee serve.txt
+          grep -F 'ResidentView ARexx host stub: TEST.RESIDENTVIEW' serve.txt
+          grep -F 'PING=PONG' serve.txt
