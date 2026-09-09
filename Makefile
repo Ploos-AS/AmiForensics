@@ -33,8 +33,11 @@ check:
 	@grep -q 'boot_checksum_sum' src/bootinfo.c
 	@grep -q 'checksum_valid' src/bootinfo.c
 	@grep -q 'Forbid' src/residentview.c
-	@grep -q 'TaskReady' src/residentview.c
-	@grep -q 'PortList' src/residentview.c
+	@grep -q 'ResModules' src/residentview.c
+	@grep -q 'RTC_MATCHWORD' src/residentview.c
+	@grep -q 'CreateArgstring' src/residentview.c
+	@grep -q 'RXFF_RESULT' src/residentview.c
+	@grep -q 'LIST RESIDENTS' src/residentview.c
 	@echo "static checks: PASS"
 
 clean:
