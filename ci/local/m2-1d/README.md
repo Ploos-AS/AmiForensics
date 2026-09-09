@@ -11,36 +11,47 @@ The GitHub AROS preflight proves that the ARexx-enabled ResidentView binary buil
 - ARexx-enabled `ResidentView-ARexx` from the M2.1d native build
 - `ResidentView.rexx` from this directory
 
-## Qualification procedure
+## Preferred one-command flow
 
-1. Copy `ResidentView-ARexx` to the guest, for example `RAM:ResidentView`.
-2. Copy `ResidentView.rexx` to the guest, for example `RAM:ResidentView.rexx`.
-3. Ensure RexxMast is running.
-4. Start the server:
+From the repository root, prepare the qualification bundle:
 
-```text
-Run >NIL: RAM:ResidentView --serve
+```sh
+bash ci/fs-uae/build-native-arexx.sh
+bash ci/local/m2-1d/qualify.sh
 ```
 
-5. Execute the qualification script:
+The second command creates `build/local/m2-1d/` containing the binary, ARexx script, SHA-256 evidence and environment metadata template.
+
+Copy `ResidentView-ARexx` and `ResidentView.rexx` from that directory into a real AmigaOS 2.04+ FS-UAE guest. Ensure RexxMast is running, then execute:
 
 ```text
+Run >NIL: RAM:ResidentView-ARexx --serve
 RX RAM:ResidentView.rexx
 ```
 
-6. Copy the result back to the host:
-
-```text
-RAM:m2_1d_residentview_result.txt
-```
-
-7. Validate it from the repository root:
+Copy `RAM:m2_1d_residentview_result.txt` back to `build/local/m2-1d/m2_1d_residentview_result.txt`, then rerun:
 
 ```sh
-bash ci/local/m2-1d/validate-result.sh m2_1d_residentview_result.txt
+bash ci/local/m2-1d/qualify.sh
 ```
 
-A PASS requires all of the following:
+A PASS now automatically writes:
+
+- `validation.txt`
+- result SHA-256
+- `qualification-summary.txt`
+
+Set environment values before the final run when known, for example:
+
+```sh
+FS_UAE_VERSION='3.2.35' \
+KICKSTART_VERSION='37.175' \
+WORKBENCH_VERSION='37.67' \
+CPU_PROFILE='A1200/68020' \
+bash ci/local/m2-1d/qualify.sh
+```
+
+## PASS requirements
 
 - `PING_RC=0`
 - `PING_RESULT=PONG`
