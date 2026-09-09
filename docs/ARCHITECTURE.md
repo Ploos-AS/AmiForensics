@@ -50,7 +50,19 @@ Machine-readable output should converge on a shared format so workstation automa
 
 ## ARexx
 
-ARexx support is desirable for tools that benefit from orchestration or live queries. It is not required where a simple command invocation and structured output are sufficient.
+ARexx is a first-class integration mechanism where it provides useful live control, queries or orchestration. It is not added merely as a checkbox to every utility.
+
+Tools that maintain live system state or benefit from interactive automation should normally expose an ARexx port. Likely candidates include ResidentView, PatchView, MemScan, TraceExec, DiskWatch, Compare and Report/workflow control.
+
+Short-lived static commands such as FileInfo, Strings, HunkInfo and BootInfo may initially remain ordinary CLI programs when launching them from ARexx already provides the necessary automation. If persistent/batch operation later makes a dedicated ARexx port useful, the interface can be added without changing their analysis semantics.
+
+Where an ARexx port is provided:
+
+- commands and result codes must be documented
+- query operations should be read-only by default
+- machine-readable results should match the normal CLI/report schema where practical
+- port naming should be stable and collision-aware
+- ARexx support must not weaken the AmigaOS 2.04+ baseline without explicit documentation
 
 ## Dynamic-analysis boundary
 
