@@ -1,0 +1,60 @@
+name: M4.3 TraceExec pre/post task state qualification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  traceexec-prepost-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native TraceExec build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-traceexec.sh
+      - name: Gate 2 - host pre/post task state contract
+        shell: bash
+        run: |
+          make clean
+          make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror -Wno-unused-function' TraceExec
+          ./TraceExec --kv --capture-tasks --interval 1 | tee host-traceexec-prepost.txt
+          grep -F 'tool=TraceExec' host-traceexec-prepost.txt
+          grep -F 'schema=amiforensics.trace.kv/1' host-traceexec-prepost.txt
+          grep -F 'mode=task-state-prepost' host-traceexec-prepost.txt
+          grep -F 'hooking=false' host-traceexec-prepost.txt
+          grep -F 'interval_ticks=1' host-traceexec-prepost.txt
+          grep -F 'before_record_count=2' host-traceexec-prepost.txt
+          grep -F 'after_record_count=2' host-traceexec-prepost.txt
+          grep -F 'record.0.event=task-added' host-traceexec-prepost.txt
+          grep -F 'record.0.name=host-task-c' host-traceexec-prepost.txt
+          grep -F 'record.1.event=task-removed' host-traceexec-prepost.txt
+          grep -F 'record.1.name=host-task-b' host-traceexec-prepost.txt
+          grep -F 'record_count=2' host-traceexec-prepost.txt
+          grep -F 'taskset_truncated=false' host-traceexec-prepost.txt
+          grep -F 'truncated=false' host-traceexec-prepost.txt
+          ! ./TraceExec --capture-tasks --watch-tasks 2
+          ! ./TraceExec --capture-tasks --interval 51
+      - name: Gate 3 - execute pre/post task state capture in AROS guest
+        run: bash ci/fs-uae/run-aros-traceexec-prepost.sh
+      - name: Upload qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-3-traceexec-prepost-qualification
+          path: |
+            build/fs-uae/native-traceexec/TraceExec
+            build/fs-uae/native-traceexec/TraceExec.sha256
+            build/fs-uae/native-traceexec/file.txt
+            build/fs-uae/native-traceexec/result.txt
+            build/fs-uae/native-traceexec/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-traceexec-prepost/result.txt
+            build/fs-uae/aros-traceexec-prepost/fs-uae.log
+            build/fs-uae/aros-traceexec-prepost/fs-uae-version.txt
+            build/fs-uae/aros-traceexec-prepost/aros-traceexec-prepost.fs-uae
+            host-traceexec-prepost.txt
