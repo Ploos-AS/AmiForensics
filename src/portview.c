@@ -88,10 +88,12 @@ static void print_kv(const POVSnapshot *s, const char *filter)
 {
     unsigned int i, out = 0;
     printf("tool=PortView\n");
+    printf("schema=amiforensics.snapshot.kv/1\n");
     if (filter != NULL) printf("filter_name=%s\n", filter);
     for (i = 0; i < s->count; ++i) {
         const POVRecord *r = &s->records[i];
         if (!name_matches(filter, r->name)) continue;
+        printf("record.%u.kind=port\n", out);
         printf("record.%u.address=%08lX\n", out, r->address);
         printf("record.%u.priority=%ld\n", out, r->priority);
         printf("record.%u.sigbit=%u\n", out, r->sigbit);
