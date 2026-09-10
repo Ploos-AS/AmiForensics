@@ -1,0 +1,58 @@
+name: M3.4 SampleDump qualification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sampledump-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native SampleDump build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-sampledump.sh
+      - name: Gate 2 - host bounded dump contract
+        shell: bash
+        run: |
+          make clean
+          make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror -Wno-unused-function' SampleDump
+          ./SampleDump --kv --address 0x1000 --length 32 --output host-sample.bin | tee host-sampledump.txt
+          grep -F 'tool=SampleDump' host-sampledump.txt
+          grep -F 'schema=amiforensics.sampledump.kv/1' host-sampledump.txt
+          grep -F 'mode=bounded-memory-dump' host-sampledump.txt
+          grep -F 'address=00001000' host-sampledump.txt
+          grep -F 'length=32' host-sampledump.txt
+          grep -F 'region_lower=00001000' host-sampledump.txt
+          grep -F 'region_upper=00001100' host-sampledump.txt
+          grep -E '^crc32=[0-9A-F]{8}$' host-sampledump.txt
+          grep -F 'complete=true' host-sampledump.txt
+          test "$(wc -c < host-sample.bin)" -eq 32
+          ! ./SampleDump --address 0x1000 --length 65537 --output too-big.bin
+          ! ./SampleDump --address 0x2000 --length 16 --output outside.bin
+      - name: Gate 3 - execute SampleDump in AROS guest
+        run: bash ci/fs-uae/run-aros-sampledump.sh
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-4-sampledump-qualification
+          path: |
+            build/fs-uae/native-sampledump/SampleDump
+            build/fs-uae/native-sampledump/SampleDump.sha256
+            build/fs-uae/native-sampledump/file.txt
+            build/fs-uae/native-sampledump/result.txt
+            build/fs-uae/native-sampledump/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-sampledump/result.txt
+            build/fs-uae/aros-sampledump/fs-uae.log
+            build/fs-uae/aros-sampledump/fs-uae-version.txt
+            build/fs-uae/aros-sampledump/aros-sampledump.fs-uae
+            host-sampledump.txt
+            host-sample.bin
