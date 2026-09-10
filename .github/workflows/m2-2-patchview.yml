@@ -1,9 +1,6 @@
 name: M2.2 PatchView qualification
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:

@@ -1,9 +1,6 @@
 name: M2.2c PatchView device qualification
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 jobs:

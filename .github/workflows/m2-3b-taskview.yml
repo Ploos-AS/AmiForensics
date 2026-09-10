@@ -1,9 +1,6 @@
 name: M2.3b TaskView qualification
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 jobs:
