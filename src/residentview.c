@@ -80,7 +80,7 @@ static void snapshot_residents(RVSnapshot *s)
     struct Resident **mods = (struct Resident **)SysBase->ResModules;
     unsigned int i;
     if (mods == NULL) return;
-    for (i = 0; mods[i] != NULL && i < 256; ++i) {
+    for (i = 0; i < 256 && mods[i] != NULL; ++i) {
         struct Resident *r = mods[i];
         if (r->rt_MatchWord != RTC_MATCHWORD || r->rt_MatchTag != r) continue;
         add_record(s, "resident", (const char *)r->rt_Name, (unsigned long)r,
@@ -144,6 +144,7 @@ static void print_kv(const RVSnapshot *s, const char *filter)
 {
     unsigned int i, out = 0;
     printf("tool=ResidentView\n");
+    printf("schema=amiforensics.snapshot.kv/1\n");
     for (i = 0; i < s->count; ++i) {
         const RVRecord *r = &s->records[i];
         if (!kind_matches(filter, r->kind)) continue;
