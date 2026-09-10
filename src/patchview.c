@@ -254,6 +254,7 @@ static void print_kv(PVTargetKind kind, const char *name,
 {
     unsigned int i;
     printf("tool=PatchView\n");
+    printf("schema=amiforensics.snapshot.kv/1\n");
     printf("kind=%s\n", target_kind_name(kind));
     if (kind == PV_TARGET_LIBRARY) {
         printf("library=%s\n", name);
@@ -270,6 +271,7 @@ static void print_kv(PVTargetKind kind, const char *name,
     printf("clipped=%s\n", summary->clipped ? "true" : "false");
     for (i = 0; i < summary->inspected_vectors; ++i) {
         const PVRecord *r = &records[i];
+        printf("record.%u.kind=vector\n", i);
         printf("record.%u.index=%u\n", i, r->index);
         printf("record.%u.lvo=%ld\n", i, r->lvo);
         printf("record.%u.vector_address=%08lX\n", i, r->vector_address);
@@ -278,6 +280,7 @@ static void print_kv(PVTargetKind kind, const char *name,
         printf("record.%u.target=%08lX\n", i, r->target);
     }
     printf("record_count=%u\n", summary->inspected_vectors);
+    printf("truncated=false\n");
 }
 
 int main(int argc, char **argv)
@@ -287,6 +290,7 @@ int main(int argc, char **argv)
     unsigned long unit = 0;
     unsigned int count = PV_DEFAULT_COUNT;
     int target_explicit = 0;
+    int unit_explicit = 0;
     int kv = 0;
     int i;
     PVRecord *records;
@@ -313,6 +317,7 @@ int main(int argc, char **argv)
             unsigned long n = strtoul(argv[++i], &end, 10);
             if (end == NULL || *end != '\0') { usage(); return 10; }
             unit = n;
+            unit_explicit = 1;
         } else if (strcmp(argv[i], "--count") == 0 && i + 1 < argc) {
             char *end = NULL;
             unsigned long n = strtoul(argv[++i], &end, 10);
@@ -327,7 +332,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (kind != PV_TARGET_DEVICE && unit != 0) {
+    if (kind != PV_TARGET_DEVICE && unit_explicit) {
         usage();
         return 10;
     }
