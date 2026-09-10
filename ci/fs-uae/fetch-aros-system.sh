@@ -10,13 +10,22 @@ index_html="$OUT_DIR/aros-nightly-index.html"
 CURL_COMMON=(--fail --location --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 180)
 
 echo "AROS_FETCH_PHASE=index" >&2
-curl "${CURL_COMMON[@]}" "$AROS_INDEX_URL" -o "$index_html"
-AROS_URL="$(
-  { grep -oE 'href="[^"]*amiga-m68k-boot-iso[^"]*"' "$index_html" || true; } \
-    | head -n 1 \
-    | sed -e 's/^href="//' -e 's/"$//' -e 's/&amp;/\&/g'
-)"
-[[ -n "$AROS_URL" ]] || { echo "ERROR: AROS system URL not found" >&2; exit 1; }
+AROS_URL=""
+for attempt in 1 2 3 4; do
+  curl "${CURL_COMMON[@]}" "$AROS_INDEX_URL" -o "$index_html"
+  AROS_URL="$(
+    { grep -oE 'href="[^"]*amiga-m68k-boot-iso[^"]*"' "$index_html" || true; } \
+      | head -n 1 \
+      | sed -e 's/^href="//' -e 's/"$//' -e 's/&amp;/\&/g'
+  )"
+  if [[ -n "$AROS_URL" ]]; then
+    break
+  fi
+  bytes="$(wc -c < "$index_html" | tr -d ' ')"
+  echo "AROS_INDEX_ATTEMPT=$attempt bytes=$bytes target_missing=1" >&2
+  if [[ "$attempt" -lt 4 ]]; then sleep $((attempt * 3)); fi
+done
+[[ -n "$AROS_URL" ]] || { echo "ERROR: AROS system URL not found after 4 index attempts" >&2; exit 1; }
 case "$AROS_URL" in
   http://*|https://*) ;;
   //*) AROS_URL="https:${AROS_URL}" ;;
