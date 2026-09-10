@@ -7,6 +7,11 @@
 #define PV_MAX_COUNT 256
 #define PV_VECTOR_SIZE 6U
 
+typedef enum {
+    PV_TARGET_LIBRARY = 0,
+    PV_TARGET_DEVICE = 1
+} PVTargetKind;
+
 typedef struct {
     unsigned int index;
     long lvo;
@@ -23,6 +28,7 @@ typedef struct {
     unsigned int requested_vectors;
     unsigned int inspected_vectors;
     unsigned long vector_crc32;
+    unsigned long unit;
     int clipped;
 } PVSummary;
 
@@ -40,14 +46,23 @@ static unsigned long crc32_update(unsigned long crc, const unsigned char *data,
     return (~crc) & 0xFFFFFFFFUL;
 }
 
+static const char *target_kind_name(PVTargetKind kind)
+{
+    return kind == PV_TARGET_DEVICE ? "device" : "library";
+}
+
 static void usage(void)
 {
-    fprintf(stderr, "Usage: PatchView [--kv] [--library NAME] [--count N]\n");
+    fprintf(stderr,
+            "Usage: PatchView [--kv] [--library NAME | --device NAME [--unit N]] [--count N]\n");
 }
 
 #if defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
+#include <exec/devices.h>
 #include <exec/execbase.h>
+#include <exec/io.h>
 #include <exec/libraries.h>
+#include <exec/ports.h>
 #include <proto/exec.h>
 extern struct ExecBase *SysBase;
 
@@ -64,7 +79,7 @@ static unsigned long read_be32(const unsigned char *p)
            (unsigned long)p[3];
 }
 
-static struct Library *open_target(const char *name, int *must_close)
+static struct Library *open_library_target(const char *name, int *must_close)
 {
     if (strcmp(name, "exec.library") == 0) {
         *must_close = 0;
@@ -74,21 +89,13 @@ static struct Library *open_target(const char *name, int *must_close)
     return OpenLibrary((CONST_STRPTR)name, 0);
 }
 
-static int inspect_vectors(const char *name, unsigned int requested,
-                           PVRecord *records, PVSummary *summary)
+static int inspect_vector_table(struct Library *lib, unsigned int requested,
+                                PVRecord *records, PVSummary *summary)
 {
-    struct Library *lib;
-    int must_close = 0;
     unsigned int i;
     unsigned int available;
     unsigned int count;
     unsigned long crc = 0;
-
-    lib = open_target(name, &must_close);
-    if (lib == NULL) {
-        fprintf(stderr, "PatchView: cannot open %s\n", name);
-        return 20;
-    }
 
     available = (unsigned int)lib->lib_NegSize / PV_VECTOR_SIZE;
     count = requested;
@@ -113,16 +120,78 @@ static int inspect_vectors(const char *name, unsigned int requested,
         crc = crc32_update(crc, v, PV_VECTOR_SIZE);
     }
     summary->vector_crc32 = crc;
-
-    if (must_close) CloseLibrary(lib);
     return 0;
 }
-#else
-static int inspect_vectors(const char *name, unsigned int requested,
+
+static int inspect_library(const char *name, unsigned int requested,
                            PVRecord *records, PVSummary *summary)
+{
+    struct Library *lib;
+    int must_close = 0;
+    int rc;
+
+    lib = open_library_target(name, &must_close);
+    if (lib == NULL) {
+        fprintf(stderr, "PatchView: cannot open library %s\n", name);
+        return 20;
+    }
+    rc = inspect_vector_table(lib, requested, records, summary);
+    if (must_close) CloseLibrary(lib);
+    return rc;
+}
+
+static int inspect_device(const char *name, unsigned long unit,
+                          unsigned int requested, PVRecord *records,
+                          PVSummary *summary)
+{
+    struct MsgPort *port;
+    struct IORequest *request;
+    struct Device *device;
+    int rc;
+
+    port = CreateMsgPort();
+    if (port == NULL) {
+        fprintf(stderr, "PatchView: cannot create message port\n");
+        return 20;
+    }
+    request = CreateIORequest(port, sizeof(struct IORequest));
+    if (request == NULL) {
+        DeleteMsgPort(port);
+        fprintf(stderr, "PatchView: cannot create I/O request\n");
+        return 20;
+    }
+    if (OpenDevice((CONST_STRPTR)name, unit, request, 0) != 0) {
+        DeleteIORequest(request);
+        DeleteMsgPort(port);
+        fprintf(stderr, "PatchView: cannot open device %s unit %lu\n", name, unit);
+        return 20;
+    }
+
+    device = request->io_Device;
+    if (device == NULL) {
+        CloseDevice(request);
+        DeleteIORequest(request);
+        DeleteMsgPort(port);
+        fprintf(stderr, "PatchView: device %s returned no device base\n", name);
+        return 20;
+    }
+
+    summary->unit = unit;
+    rc = inspect_vector_table(&device->dd_Library, requested, records, summary);
+
+    CloseDevice(request);
+    DeleteIORequest(request);
+    DeleteMsgPort(port);
+    return rc;
+}
+#else
+static int inspect_stub(PVTargetKind kind, const char *name, unsigned long unit,
+                        unsigned int requested, PVRecord *records,
+                        PVSummary *summary)
 {
     unsigned int i;
     unsigned long crc = 0;
+    (void)kind;
     (void)name;
 
     summary->library_base = 0x1000UL;
@@ -130,6 +199,7 @@ static int inspect_vectors(const char *name, unsigned int requested,
     summary->available_vectors = PV_MAX_COUNT;
     summary->requested_vectors = requested;
     summary->inspected_vectors = requested;
+    summary->unit = unit;
     summary->clipped = 0;
 
     for (i = 0; i < requested; ++i) {
@@ -153,11 +223,13 @@ static int inspect_vectors(const char *name, unsigned int requested,
 }
 #endif
 
-static void print_human(const char *library, const PVRecord *records,
-                        const PVSummary *summary)
+static void print_human(PVTargetKind kind, const char *name,
+                        const PVRecord *records, const PVSummary *summary)
 {
     unsigned int i;
-    printf("PatchView library vectors: %s\n", library);
+    printf("PatchView %s vectors: %s", target_kind_name(kind), name);
+    if (kind == PV_TARGET_DEVICE) printf(" unit %lu", summary->unit);
+    putchar('\n');
     printf("base=%08lX neg_size=%u available=%u inspected=%u crc32=%08lX\n",
            summary->library_base, summary->neg_size,
            summary->available_vectors, summary->inspected_vectors,
@@ -173,16 +245,22 @@ static void print_human(const char *library, const PVRecord *records,
         putchar('\n');
     }
     if (summary->clipped)
-        printf("WARNING: requested %u vectors, library exposes only %u complete 6-byte entries\n",
+        printf("WARNING: requested %u vectors, target exposes only %u complete 6-byte entries\n",
                summary->requested_vectors, summary->available_vectors);
 }
 
-static void print_kv(const char *library, const PVRecord *records,
-                     const PVSummary *summary)
+static void print_kv(PVTargetKind kind, const char *name,
+                     const PVRecord *records, const PVSummary *summary)
 {
     unsigned int i;
     printf("tool=PatchView\n");
-    printf("library=%s\n", library);
+    printf("kind=%s\n", target_kind_name(kind));
+    if (kind == PV_TARGET_LIBRARY) {
+        printf("library=%s\n", name);
+    } else {
+        printf("device=%s\n", name);
+        printf("unit=%lu\n", summary->unit);
+    }
     printf("library_base=%08lX\n", summary->library_base);
     printf("neg_size=%u\n", summary->neg_size);
     printf("available_vectors=%u\n", summary->available_vectors);
@@ -204,8 +282,11 @@ static void print_kv(const char *library, const PVRecord *records,
 
 int main(int argc, char **argv)
 {
-    const char *library = PV_DEFAULT_LIBRARY;
+    const char *name = PV_DEFAULT_LIBRARY;
+    PVTargetKind kind = PV_TARGET_LIBRARY;
+    unsigned long unit = 0;
     unsigned int count = PV_DEFAULT_COUNT;
+    int target_explicit = 0;
     int kv = 0;
     int i;
     PVRecord *records;
@@ -218,7 +299,20 @@ int main(int argc, char **argv)
         if (strcmp(argv[i], "--kv") == 0) {
             kv = 1;
         } else if (strcmp(argv[i], "--library") == 0 && i + 1 < argc) {
-            library = argv[++i];
+            if (target_explicit) { usage(); return 10; }
+            kind = PV_TARGET_LIBRARY;
+            name = argv[++i];
+            target_explicit = 1;
+        } else if (strcmp(argv[i], "--device") == 0 && i + 1 < argc) {
+            if (target_explicit) { usage(); return 10; }
+            kind = PV_TARGET_DEVICE;
+            name = argv[++i];
+            target_explicit = 1;
+        } else if (strcmp(argv[i], "--unit") == 0 && i + 1 < argc) {
+            char *end = NULL;
+            unsigned long n = strtoul(argv[++i], &end, 10);
+            if (end == NULL || *end != '\0') { usage(); return 10; }
+            unit = n;
         } else if (strcmp(argv[i], "--count") == 0 && i + 1 < argc) {
             char *end = NULL;
             unsigned long n = strtoul(argv[++i], &end, 10);
@@ -233,16 +327,29 @@ int main(int argc, char **argv)
         }
     }
 
+    if (kind != PV_TARGET_DEVICE && unit != 0) {
+        usage();
+        return 10;
+    }
+
     records = (PVRecord *)malloc(sizeof(*records) * count);
     if (records == NULL) {
         fprintf(stderr, "PatchView: out of memory\n");
         return 20;
     }
 
-    rc = inspect_vectors(library, count, records, &summary);
+#if defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
+    if (kind == PV_TARGET_DEVICE)
+        rc = inspect_device(name, unit, count, records, &summary);
+    else
+        rc = inspect_library(name, count, records, &summary);
+#else
+    rc = inspect_stub(kind, name, unit, count, records, &summary);
+#endif
+
     if (rc == 0) {
-        if (kv) print_kv(library, records, &summary);
-        else print_human(library, records, &summary);
+        if (kv) print_kv(kind, name, records, &summary);
+        else print_human(kind, name, records, &summary);
         if (summary.clipped) rc = 5;
     }
     free(records);
