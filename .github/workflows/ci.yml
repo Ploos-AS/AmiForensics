@@ -134,7 +134,7 @@ jobs:
           grep -F 'device=trackdisk.device' patchview-device-kv.txt
           grep -F 'unit=0' patchview-device-kv.txt
           grep -F 'record_count=2' patchview-device-kv.txt
-      - name: Exercise TaskView host interface
+      - name: Exercise TaskView normalized snapshot interface
         shell: bash
         run: |
           ./TaskView | tee taskview.txt
@@ -144,12 +144,29 @@ jobs:
           grep -F 'wait.example' taskview.txt
           ./TaskView --kv --state ready | tee taskview-kv.txt
           grep -F 'tool=TaskView' taskview-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' taskview-kv.txt
           grep -F 'filter_state=ready' taskview-kv.txt
+          grep -F 'record.0.kind=task' taskview-kv.txt
           grep -F 'record.0.state=ready' taskview-kv.txt
           grep -F 'record.0.name=ready.example' taskview-kv.txt
           grep -F 'record_count=1' taskview-kv.txt
           grep -F 'truncated=false' taskview-kv.txt
-      - name: Exercise PortView host interface
+      - name: Exercise ProcessView normalized snapshot interface
+        shell: bash
+        run: |
+          ./ProcessView | tee processview.txt
+          grep -F 'ProcessView process snapshot' processview.txt
+          grep -F 'ProcessView-host-stub' processview.txt
+          ./ProcessView --kv --state wait | tee processview-kv.txt
+          grep -F 'tool=ProcessView' processview-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' processview-kv.txt
+          grep -F 'filter_state=wait' processview-kv.txt
+          grep -F 'record.0.kind=process' processview-kv.txt
+          grep -F 'record.0.state=wait' processview-kv.txt
+          grep -F 'record.0.name=Shell Process' processview-kv.txt
+          grep -F 'record_count=1' processview-kv.txt
+          grep -F 'truncated=false' processview-kv.txt
+      - name: Exercise PortView normalized snapshot interface
         shell: bash
         run: |
           ./PortView | tee portview.txt
@@ -158,7 +175,9 @@ jobs:
           grep -F 'WORKBENCH' portview.txt
           ./PortView --kv --name REXX | tee portview-kv.txt
           grep -F 'tool=PortView' portview-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' portview-kv.txt
           grep -F 'filter_name=REXX' portview-kv.txt
+          grep -F 'record.0.kind=port' portview-kv.txt
           grep -F 'record.0.name=REXX' portview-kv.txt
           grep -F 'record_count=1' portview-kv.txt
           grep -F 'truncated=false' portview-kv.txt
