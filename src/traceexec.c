@@ -56,14 +56,6 @@ static int taskset_contains(const TETaskSet *set, unsigned long address)
     return 0;
 }
 
-static const TETaskRecord *taskset_find(const TETaskSet *set, unsigned long address)
-{
-    unsigned int i;
-    for (i = 0; i < set->count; ++i)
-        if (set->records[i].address == address) return &set->records[i];
-    return NULL;
-}
-
 static void add_task_record(TETaskSet *set, unsigned long address, const char *name)
 {
     TETaskRecord *r;
