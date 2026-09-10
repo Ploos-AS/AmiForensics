@@ -1,0 +1,14 @@
+[fs-uae]
+amiga_model = A1200
+kickstart_file = internal
+fullscreen = 0
+window_width = 800
+window_height = 600
+
+# M5.2 disposable workstation mounts.
+# The base system is supplied by the operator and is never bundled here.
+hard_drive_0 = @SYSTEM_ROOT@
+hard_drive_1 = @RUN_DIR@
+
+# Keep host integration explicit and minimal.
+bsdsocket_library = 0
