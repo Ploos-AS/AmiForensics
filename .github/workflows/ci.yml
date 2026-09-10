@@ -122,11 +122,18 @@ jobs:
           grep -F 'JMP' patchview.txt
           ./PatchView --kv --library dos.library --count 2 | tee patchview-kv.txt
           grep -F 'tool=PatchView' patchview-kv.txt
+          grep -F 'kind=library' patchview-kv.txt
           grep -F 'library=dos.library' patchview-kv.txt
           grep -F 'record.0.lvo=-6' patchview-kv.txt
           grep -F 'record.0.direct_jmp=true' patchview-kv.txt
           grep -E '^vector_crc32=[0-9A-F]{8}$' patchview-kv.txt
           grep -F 'record_count=2' patchview-kv.txt
+          ./PatchView --kv --device trackdisk.device --unit 0 --count 2 | tee patchview-device-kv.txt
+          grep -F 'tool=PatchView' patchview-device-kv.txt
+          grep -F 'kind=device' patchview-device-kv.txt
+          grep -F 'device=trackdisk.device' patchview-device-kv.txt
+          grep -F 'unit=0' patchview-device-kv.txt
+          grep -F 'record_count=2' patchview-device-kv.txt
       - name: Exercise TaskView host interface
         shell: bash
         run: |
