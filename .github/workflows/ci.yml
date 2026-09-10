@@ -187,19 +187,33 @@ jobs:
           grep -F 'record.0.name=REXX' portview-kv.txt
           grep -F 'record_count=1' portview-kv.txt
           grep -F 'truncated=false' portview-kv.txt
-      - name: Exercise MemScan M3.1 host interface
+      - name: Exercise MemScan M3.2 heuristics
         shell: bash
         run: |
           ./MemScan | tee memscan.txt
           grep -F 'MemScan memory-region snapshot' memscan.txt
           grep -F 'chip memory' memscan.txt
           grep -F 'fast memory' memscan.txt
+          grep -F 'risk=high' memscan.txt
           ./MemScan --kv | tee memscan-kv.txt
           grep -F 'tool=MemScan' memscan-kv.txt
           grep -F 'schema=amiforensics.snapshot.kv/1' memscan-kv.txt
           grep -F 'mode=memory-region-inventory' memscan-kv.txt
+          grep -F 'filter_suspicious=false' memscan-kv.txt
           grep -F 'record.0.kind=memory-region' memscan-kv.txt
           grep -E '^record\.0\.lower=[0-9A-F]{8}$' memscan-kv.txt
           grep -E '^record\.0\.upper=[0-9A-F]{8}$' memscan-kv.txt
-          grep -F 'record_count=2' memscan-kv.txt
+          grep -F 'record.0.suspicious=false' memscan-kv.txt
+          grep -F 'record_count=3' memscan-kv.txt
+          grep -F 'source_record_count=3' memscan-kv.txt
           grep -F 'truncated=false' memscan-kv.txt
+          ./MemScan --kv --suspicious | tee memscan-suspicious-kv.txt
+          grep -F 'filter_suspicious=true' memscan-suspicious-kv.txt
+          grep -F 'record_count=1' memscan-suspicious-kv.txt
+          grep -F 'source_record_count=3' memscan-suspicious-kv.txt
+          grep -F 'record.0.suspicious=true' memscan-suspicious-kv.txt
+          grep -F 'record.0.risk_level=high' memscan-suspicious-kv.txt
+          grep -F 'record.0.indicator.zero_size=true' memscan-suspicious-kv.txt
+          grep -F 'record.0.indicator.free_exceeds_range=true' memscan-suspicious-kv.txt
+          grep -F 'record.0.indicator.odd_boundary=true' memscan-suspicious-kv.txt
+          grep -F 'record.0.indicator.unnamed=true' memscan-suspicious-kv.txt
