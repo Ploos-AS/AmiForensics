@@ -98,9 +98,18 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 - explicit emulator start; no sample auto-execution
 - emulator state and return code recorded in the run manifest
 
+### M5.3 Snapshots and artifact collection — implemented
+
+- normalized pre/post workstation snapshots
+- SHA-256 inventory of profile, logs and collected artifacts
+- explicit file-only artifact collection
+- read-only collected copies
+- per-collection `index.json`
+- collection metadata recorded in the run manifest
+
 ### Next
 
-- M5.3 snapshots and artifact collection
+- M5.4 snapshot comparison / analysis-session diff foundation
 - optional Ghidra integration
 
 ## M6 — Reporting and automation
