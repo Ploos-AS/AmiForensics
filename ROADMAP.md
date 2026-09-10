@@ -80,11 +80,20 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 
 ## M5 — Analysis workstation
 
+### M5.1 Workstation foundation — implemented
+
+- disposable run-directory contract
+- explicit sample preparation without automatic execution
+- immutable input copy
+- host-side SHA-256 and metadata manifest
+- artifact and log directories
+
+### Next
+
 - FS-UAE orchestration
 - disposable analysis profiles
 - snapshots
 - artifact collection
-- host-side hashing and metadata
 - optional Ghidra integration
 
 ## M6 — Reporting and automation
