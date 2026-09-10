@@ -113,3 +113,16 @@ jobs:
           ./ResidentView --serve TEST.RESIDENTVIEW | tee serve.txt
           grep -F 'ResidentView ARexx host stub: TEST.RESIDENTVIEW' serve.txt
           grep -F 'PING=PONG' serve.txt
+      - name: Exercise PatchView host interface
+        shell: bash
+        run: |
+          ./PatchView --library exec.library --count 3 | tee patchview.txt
+          grep -F 'PatchView library vectors: exec.library' patchview.txt
+          grep -F 'LVO    -6' patchview.txt
+          grep -F 'JMP' patchview.txt
+          ./PatchView --kv --library dos.library --count 2 | tee patchview-kv.txt
+          grep -F 'tool=PatchView' patchview-kv.txt
+          grep -F 'library=dos.library' patchview-kv.txt
+          grep -F 'record.0.lvo=-6' patchview-kv.txt
+          grep -F 'record.0.direct_jmp=true' patchview-kv.txt
+          grep -F 'record_count=2' patchview-kv.txt
