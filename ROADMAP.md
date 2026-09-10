@@ -88,12 +88,19 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 - host-side SHA-256 and metadata manifest
 - artifact and log directories
 
+### M5.2 FS-UAE orchestration — implemented
+
+- parameterized disposable AROS/A1200 profile
+- operator-supplied system root; no bundled ROM/system image
+- run directory mounted separately for controlled artifacts
+- network integration disabled by default
+- dry-run launch inspection
+- explicit emulator start; no sample auto-execution
+- emulator state and return code recorded in the run manifest
+
 ### Next
 
-- FS-UAE orchestration
-- disposable analysis profiles
-- snapshots
-- artifact collection
+- M5.3 snapshots and artifact collection
 - optional Ghidra integration
 
 ## M6 — Reporting and automation
