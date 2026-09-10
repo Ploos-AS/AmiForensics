@@ -1,0 +1,6 @@
+# AmiForensics disposable workstation runs
+workstation/runs/
+
+# Python
+__pycache__/
+*.py[cod]
