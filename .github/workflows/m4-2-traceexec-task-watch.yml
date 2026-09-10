@@ -1,8 +1,6 @@
 name: M4.2 TraceExec task lifecycle watch qualification
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
