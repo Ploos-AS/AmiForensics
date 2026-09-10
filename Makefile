@@ -49,6 +49,9 @@ check:
 	@grep -q 'LIST RESIDENTS' src/residentview.c
 	@grep -q '0x4EF9' src/patchview.c
 	@grep -q 'OpenLibrary' src/patchview.c
+	@grep -q 'OpenDevice' src/patchview.c
+	@grep -q 'CreateIORequest' src/patchview.c
+	@grep -q 'dd_Library' src/patchview.c
 	@grep -q 'direct_jmp' src/patchview.c
 	@grep -q 'TaskReady' src/taskview.c
 	@grep -q 'TaskWait' src/taskview.c
