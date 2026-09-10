@@ -48,7 +48,9 @@ valid_all() {
     grep -q '^record\.0\.kind=memory-region' "$all_out" && \
     grep -q '^record\.0\.lower=' "$all_out" && \
     grep -q '^record\.0\.upper=' "$all_out" && \
-    grep -q '^record\.0\.risk_hint=' "$all_out" && \
+    grep -q '^record\.0\.risk_level=' "$all_out" && \
+    grep -Eq '^record\.0\.risk_score=[0-9]+$' "$all_out" && \
+    grep -Eq '^record\.0\.indicator_count=[0-9]+$' "$all_out" && \
     grep -Eq '^record_count=[1-9][0-9]*$' "$all_out" && \
     grep -q '^truncated=' "$all_out"
 }
