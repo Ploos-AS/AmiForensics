@@ -119,9 +119,6 @@ static void take_task_set(TETaskSet *set)
     if (host_task_sample == 0U) {
         add_task_record(set, 0x00100000UL, "host-task-a");
         add_task_record(set, 0x00101000UL, "host-task-b");
-    } else if (host_task_sample == 1U) {
-        add_task_record(set, 0x00100000UL, "host-task-a");
-        add_task_record(set, 0x00102000UL, "host-task-c");
     } else {
         add_task_record(set, 0x00100000UL, "host-task-a");
         add_task_record(set, 0x00102000UL, "host-task-c");
@@ -153,6 +150,39 @@ static void compare_task_sets(TESnapshot *events, const TETaskSet *before, const
         if (!taskset_contains(after, before->records[i].address))
             add_event(events, "task-removed", before->records[i].name, before->records[i].address);
     }
+}
+
+static int capture_task_prepost(TESnapshot *events, unsigned int interval_ticks,
+                                unsigned int *before_count, unsigned int *after_count,
+                                unsigned int *taskset_truncated)
+{
+    TETaskSet *before;
+    TETaskSet *after;
+
+    before = (TETaskSet *)malloc(sizeof(*before));
+    after = (TETaskSet *)malloc(sizeof(*after));
+    if (before == NULL || after == NULL) {
+        free(before);
+        free(after);
+        return 20;
+    }
+
+    memset(events, 0, sizeof(*events));
+    *taskset_truncated = 0U;
+    take_task_set(before);
+    *before_count = before->count;
+    if (before->truncated) *taskset_truncated = 1U;
+
+    wait_interval(interval_ticks);
+
+    take_task_set(after);
+    *after_count = after->count;
+    if (after->truncated) *taskset_truncated = 1U;
+    compare_task_sets(events, before, after);
+
+    free(before);
+    free(after);
+    return 0;
 }
 
 static int watch_tasks(TESnapshot *events, unsigned int samples, unsigned int interval_ticks,
@@ -190,13 +220,9 @@ static int watch_tasks(TESnapshot *events, unsigned int samples, unsigned int in
     return 0;
 }
 
-static void print_kv(const TESnapshot *s)
+static void print_event_records(const TESnapshot *s)
 {
     unsigned int i;
-    printf("tool=TraceExec\n");
-    printf("schema=amiforensics.trace.kv/1\n");
-    printf("mode=event-observation\n");
-    printf("hooking=false\n");
     for (i = 0; i < s->count; ++i) {
         const TEEvent *r = &s->events[i];
         printf("record.%u.kind=event\n", i);
@@ -205,6 +231,15 @@ static void print_kv(const TESnapshot *s)
         printf("record.%u.name=%s\n", i, r->name);
         printf("record.%u.address=%08lX\n", i, r->address & 0xFFFFFFFFUL);
     }
+}
+
+static void print_kv(const TESnapshot *s)
+{
+    printf("tool=TraceExec\n");
+    printf("schema=amiforensics.trace.kv/1\n");
+    printf("mode=event-observation\n");
+    printf("hooking=false\n");
+    print_event_records(s);
     printf("record_count=%u\n", s->count);
     printf("truncated=%s\n", s->truncated ? "true" : "false");
 }
@@ -212,21 +247,30 @@ static void print_kv(const TESnapshot *s)
 static void print_watch_kv(const TESnapshot *s, unsigned int samples, unsigned int interval_ticks,
                            unsigned int taskset_truncated)
 {
-    unsigned int i;
     printf("tool=TraceExec\n");
     printf("schema=amiforensics.trace.kv/1\n");
     printf("mode=task-lifecycle-watch\n");
     printf("hooking=false\n");
     printf("samples_requested=%u\n", samples);
     printf("interval_ticks=%u\n", interval_ticks);
-    for (i = 0; i < s->count; ++i) {
-        const TEEvent *r = &s->events[i];
-        printf("record.%u.kind=event\n", i);
-        printf("record.%u.sequence=%lu\n", i, r->sequence);
-        printf("record.%u.event=%s\n", i, r->event);
-        printf("record.%u.name=%s\n", i, r->name);
-        printf("record.%u.address=%08lX\n", i, r->address & 0xFFFFFFFFUL);
-    }
+    print_event_records(s);
+    printf("record_count=%u\n", s->count);
+    printf("taskset_truncated=%s\n", taskset_truncated ? "true" : "false");
+    printf("truncated=%s\n", s->truncated ? "true" : "false");
+}
+
+static void print_prepost_kv(const TESnapshot *s, unsigned int interval_ticks,
+                             unsigned int before_count, unsigned int after_count,
+                             unsigned int taskset_truncated)
+{
+    printf("tool=TraceExec\n");
+    printf("schema=amiforensics.trace.kv/1\n");
+    printf("mode=task-state-prepost\n");
+    printf("hooking=false\n");
+    printf("interval_ticks=%u\n", interval_ticks);
+    printf("before_record_count=%u\n", before_count);
+    printf("after_record_count=%u\n", after_count);
+    print_event_records(s);
     printf("record_count=%u\n", s->count);
     printf("taskset_truncated=%s\n", taskset_truncated ? "true" : "false");
     printf("truncated=%s\n", s->truncated ? "true" : "false");
@@ -260,6 +304,24 @@ static void print_watch_human(const TESnapshot *s, unsigned int samples, unsigne
            taskset_truncated ? " (task snapshot truncated)" : "");
 }
 
+static void print_prepost_human(const TESnapshot *s, unsigned int interval_ticks,
+                                unsigned int before_count, unsigned int after_count,
+                                unsigned int taskset_truncated)
+{
+    unsigned int i;
+    printf("TraceExec task pre/post state capture\n");
+    printf("Hooking: disabled\n");
+    printf("Interval ticks: %u\n", interval_ticks);
+    printf("Task records: before=%u after=%u\n", before_count, after_count);
+    for (i = 0; i < s->count; ++i)
+        printf("%3lu %-16s %08lX %s\n", s->events[i].sequence,
+               s->events[i].event, s->events[i].address & 0xFFFFFFFFUL,
+               s->events[i].name);
+    printf("Changes: %u%s%s\n", s->count,
+           s->truncated ? " (event list truncated)" : "",
+           taskset_truncated ? " (task snapshot truncated)" : "");
+}
+
 static int parse_uint(const char *text, unsigned int min_value, unsigned int max_value,
                       unsigned int *value)
 {
@@ -274,7 +336,8 @@ static int parse_uint(const char *text, unsigned int min_value, unsigned int max
 
 static void usage(void)
 {
-    fprintf(stderr, "Usage: TraceExec [--kv] [--watch-tasks SAMPLES [--interval TICKS]]\n");
+    fprintf(stderr,
+            "Usage: TraceExec [--kv] [--watch-tasks SAMPLES | --capture-tasks] [--interval TICKS]\n");
 }
 
 int main(int argc, char **argv)
@@ -282,22 +345,31 @@ int main(int argc, char **argv)
     TESnapshot *snapshot;
     int kv = 0;
     int watch = 0;
+    int prepost = 0;
     int rc;
     int i;
     unsigned int samples = 0U;
     unsigned int interval_ticks = TE_DEFAULT_INTERVAL_TICKS;
     unsigned int taskset_truncated = 0U;
+    unsigned int before_count = 0U;
+    unsigned int after_count = 0U;
 
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--kv") == 0) {
             kv = 1;
         } else if (strcmp(argv[i], "--watch-tasks") == 0) {
-            if (watch || i + 1 >= argc ||
+            if (watch || prepost || i + 1 >= argc ||
                 !parse_uint(argv[++i], TE_MIN_WATCH_SAMPLES, TE_MAX_WATCH_SAMPLES, &samples)) {
                 usage();
                 return 10;
             }
             watch = 1;
+        } else if (strcmp(argv[i], "--capture-tasks") == 0) {
+            if (watch || prepost) {
+                usage();
+                return 10;
+            }
+            prepost = 1;
         } else if (strcmp(argv[i], "--interval") == 0) {
             if (i + 1 >= argc ||
                 !parse_uint(argv[++i], 1U, TE_MAX_INTERVAL_TICKS, &interval_ticks)) {
@@ -310,7 +382,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (!watch && interval_ticks != TE_DEFAULT_INTERVAL_TICKS) {
+    if (!watch && !prepost && interval_ticks != TE_DEFAULT_INTERVAL_TICKS) {
         usage();
         return 10;
     }
@@ -323,6 +395,16 @@ int main(int argc, char **argv)
         if (rc != 0) { free(snapshot); return rc; }
         if (kv) print_watch_kv(snapshot, samples, interval_ticks, taskset_truncated);
         else print_watch_human(snapshot, samples, interval_ticks, taskset_truncated);
+        rc = (snapshot->truncated || taskset_truncated) ? 5 : 0;
+    } else if (prepost) {
+        rc = capture_task_prepost(snapshot, interval_ticks, &before_count, &after_count,
+                                  &taskset_truncated);
+        if (rc != 0) { free(snapshot); return rc; }
+        if (kv)
+            print_prepost_kv(snapshot, interval_ticks, before_count, after_count, taskset_truncated);
+        else
+            print_prepost_human(snapshot, interval_ticks, before_count, after_count,
+                                taskset_truncated);
         rc = (snapshot->truncated || taskset_truncated) ? 5 : 0;
     } else {
         take_snapshot(snapshot);
