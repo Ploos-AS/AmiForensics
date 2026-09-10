@@ -98,7 +98,7 @@ jobs:
           grep -F 'indicator_trackdisk=yes' bootinfo-kv.txt
           ./BootInfo bootblock-bad.bin | tee bootinfo-bad.txt
           grep -F 'Checksum valid: no' bootinfo-bad.txt
-      - name: Exercise ResidentView host interface
+      - name: Exercise ResidentView normalized snapshot interface
         shell: bash
         run: |
           ./ResidentView | tee residentview.txt
@@ -106,6 +106,7 @@ jobs:
           grep -F 'host-stub' residentview.txt
           ./ResidentView --kv | tee residentview-kv.txt
           grep -F 'tool=ResidentView' residentview-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' residentview-kv.txt
           grep -F 'record.0.kind=host-stub' residentview-kv.txt
           grep -F 'truncated=false' residentview-kv.txt
           ./ResidentView --kind residents | tee residents.txt
@@ -113,7 +114,7 @@ jobs:
           ./ResidentView --serve TEST.RESIDENTVIEW | tee serve.txt
           grep -F 'ResidentView ARexx host stub: TEST.RESIDENTVIEW' serve.txt
           grep -F 'PING=PONG' serve.txt
-      - name: Exercise PatchView host interface
+      - name: Exercise PatchView normalized snapshot interface
         shell: bash
         run: |
           ./PatchView --library exec.library --count 3 | tee patchview.txt
@@ -122,18 +123,23 @@ jobs:
           grep -F 'JMP' patchview.txt
           ./PatchView --kv --library dos.library --count 2 | tee patchview-kv.txt
           grep -F 'tool=PatchView' patchview-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' patchview-kv.txt
           grep -F 'kind=library' patchview-kv.txt
           grep -F 'library=dos.library' patchview-kv.txt
+          grep -F 'record.0.kind=vector' patchview-kv.txt
           grep -F 'record.0.lvo=-6' patchview-kv.txt
           grep -F 'record.0.direct_jmp=true' patchview-kv.txt
           grep -E '^vector_crc32=[0-9A-F]{8}$' patchview-kv.txt
           grep -F 'record_count=2' patchview-kv.txt
+          grep -F 'truncated=false' patchview-kv.txt
           ./PatchView --kv --device trackdisk.device --unit 0 --count 2 | tee patchview-device-kv.txt
           grep -F 'tool=PatchView' patchview-device-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' patchview-device-kv.txt
           grep -F 'kind=device' patchview-device-kv.txt
           grep -F 'device=trackdisk.device' patchview-device-kv.txt
           grep -F 'unit=0' patchview-device-kv.txt
           grep -F 'record_count=2' patchview-device-kv.txt
+          ! ./PatchView --unit 0
       - name: Exercise TaskView normalized snapshot interface
         shell: bash
         run: |
