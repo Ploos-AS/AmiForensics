@@ -2,7 +2,7 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump
+TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump TraceExec
 
 .PHONY: all clean check
 
@@ -39,6 +39,9 @@ MemScan: src/memscan.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 SampleDump: src/sampledump.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+TraceExec: src/traceexec.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 check:
@@ -84,6 +87,10 @@ check:
 	@grep -q 'find_region' src/sampledump.c
 	@grep -q 'crc32_update' src/sampledump.c
 	@grep -q 'complete=true' src/sampledump.c
+	@grep -q 'TE_MAX_EVENTS' src/traceexec.c
+	@grep -q 'FindTask' src/traceexec.c
+	@grep -q 'hooking=false' src/traceexec.c
+	@grep -q 'amiforensics.trace.kv/1' src/traceexec.c
 	@echo "static checks: PASS"
 
 clean:
