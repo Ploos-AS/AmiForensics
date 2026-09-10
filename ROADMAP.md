@@ -44,6 +44,8 @@ First usable release slice. No sample execution is required.
 
 ## M2 — System inspection
 
+Status: **CLOSED — AROS/FS-UAE qualification scope**
+
 - ResidentView
 - PatchView
 - task/process/library/device/port inspection
@@ -51,10 +53,23 @@ First usable release slice. No sample execution is required.
 
 ## M3 — Memory analysis
 
-- MemScan
-- suspicious memory-region heuristics
-- resident/code discovery
-- SampleDump
+Status: **CLOSED — AROS/FS-UAE qualification scope**
+
+- MemScan baseline memory-region inventory — qualified
+- explainable suspicious memory-region heuristics — qualified
+- registered resident/code discovery through Exec `ResModules` — qualified
+- bounded resident-signature scanning — qualified
+- SampleDump bounded explicit memory extraction — qualified
+
+Qualification records:
+
+- `docs/M3_1B_QUALIFICATION.md`
+- `docs/M3_2B_QUALIFICATION.md`
+- `docs/M3_3A_QUALIFICATION.md`
+- `docs/M3_3B_QUALIFICATION.md`
+- `docs/M3_4_QUALIFICATION.md`
+
+Real Commodore AmigaOS qualification remains separate and is not implied by AROS/FS-UAE closure.
 
 ## M4 — Dynamic observation
 
