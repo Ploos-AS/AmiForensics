@@ -2,7 +2,7 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView
+TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView
 
 .PHONY: all clean check
 
@@ -26,6 +26,9 @@ ResidentView: src/residentview.c
 PatchView: src/patchview.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
+TaskView: src/taskview.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
 check:
 	@grep -q 'HUNK_HEADER' src/fileinfo.c
 	@grep -q 'crc32_update' src/fileinfo.c
@@ -44,6 +47,10 @@ check:
 	@grep -q '0x4EF9' src/patchview.c
 	@grep -q 'OpenLibrary' src/patchview.c
 	@grep -q 'direct_jmp' src/patchview.c
+	@grep -q 'TaskReady' src/taskview.c
+	@grep -q 'TaskWait' src/taskview.c
+	@grep -q 'FindTask' src/taskview.c
+	@grep -q 'Forbid' src/taskview.c
 	@echo "static checks: PASS"
 
 clean:
