@@ -22,8 +22,23 @@ typedef struct {
     unsigned int available_vectors;
     unsigned int requested_vectors;
     unsigned int inspected_vectors;
+    unsigned long vector_crc32;
     int clipped;
 } PVSummary;
+
+static unsigned long crc32_update(unsigned long crc, const unsigned char *data,
+                                  unsigned int len)
+{
+    unsigned int i;
+    crc = ~crc;
+    for (i = 0; i < len; ++i) {
+        unsigned int bit;
+        crc ^= (unsigned long)data[i];
+        for (bit = 0; bit < 8; ++bit)
+            crc = (crc >> 1) ^ (0xEDB88320UL & (0UL - (crc & 1UL)));
+    }
+    return ~crc;
+}
 
 static void usage(void)
 {
@@ -67,6 +82,7 @@ static int inspect_vectors(const char *name, unsigned int requested,
     unsigned int i;
     unsigned int available;
     unsigned int count;
+    unsigned long crc = 0;
 
     lib = open_target(name, &must_close);
     if (lib == NULL) {
@@ -94,7 +110,9 @@ static int inspect_vectors(const char *name, unsigned int requested,
         r->opcode = read_be16(v);
         r->direct_jmp = (r->opcode == 0x4EF9U);
         r->target = r->direct_jmp ? read_be32(v + 2) : 0;
+        crc = crc32_update(crc, v, PV_VECTOR_SIZE);
     }
+    summary->vector_crc32 = crc;
 
     if (must_close) CloseLibrary(lib);
     return 0;
@@ -104,6 +122,7 @@ static int inspect_vectors(const char *name, unsigned int requested,
                            PVRecord *records, PVSummary *summary)
 {
     unsigned int i;
+    unsigned long crc = 0;
     (void)name;
 
     summary->library_base = 0x1000UL;
@@ -114,13 +133,22 @@ static int inspect_vectors(const char *name, unsigned int requested,
     summary->clipped = 0;
 
     for (i = 0; i < requested; ++i) {
+        unsigned char raw[PV_VECTOR_SIZE];
+        unsigned long target = 0x2000UL + (unsigned long)(i * 16UL);
         records[i].index = i + 1;
         records[i].lvo = -(long)(PV_VECTOR_SIZE * (i + 1UL));
         records[i].vector_address = 0x1000UL - (PV_VECTOR_SIZE * (i + 1UL));
         records[i].opcode = 0x4EF9U;
-        records[i].target = 0x2000UL + (unsigned long)(i * 16UL);
+        records[i].target = target;
         records[i].direct_jmp = 1;
+        raw[0] = 0x4E; raw[1] = 0xF9;
+        raw[2] = (unsigned char)(target >> 24);
+        raw[3] = (unsigned char)(target >> 16);
+        raw[4] = (unsigned char)(target >> 8);
+        raw[5] = (unsigned char)target;
+        crc = crc32_update(crc, raw, PV_VECTOR_SIZE);
     }
+    summary->vector_crc32 = crc;
     return 0;
 }
 #endif
@@ -130,9 +158,10 @@ static void print_human(const char *library, const PVRecord *records,
 {
     unsigned int i;
     printf("PatchView library vectors: %s\n", library);
-    printf("base=%08lX neg_size=%u available=%u inspected=%u\n",
+    printf("base=%08lX neg_size=%u available=%u inspected=%u crc32=%08lX\n",
            summary->library_base, summary->neg_size,
-           summary->available_vectors, summary->inspected_vectors);
+           summary->available_vectors, summary->inspected_vectors,
+           summary->vector_crc32);
     for (i = 0; i < summary->inspected_vectors; ++i) {
         const PVRecord *r = &records[i];
         printf("%3u LVO %5ld vector=%08lX opcode=%04X", r->index, r->lvo,
@@ -158,6 +187,8 @@ static void print_kv(const char *library, const PVRecord *records,
     printf("neg_size=%u\n", summary->neg_size);
     printf("available_vectors=%u\n", summary->available_vectors);
     printf("requested_vectors=%u\n", summary->requested_vectors);
+    printf("inspected_vectors=%u\n", summary->inspected_vectors);
+    printf("vector_crc32=%08lX\n", summary->vector_crc32);
     printf("clipped=%s\n", summary->clipped ? "true" : "false");
     for (i = 0; i < summary->inspected_vectors; ++i) {
         const PVRecord *r = &records[i];
