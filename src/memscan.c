@@ -4,7 +4,12 @@
 
 #define MS_MAX_RECORDS 128
 #define MS_MAX_RESIDENTS 128
+#define MS_MAX_CANDIDATES 128
 #define MS_NAME_LEN 80
+#define MS_SCAN_REGION_LIMIT 65536UL
+#define MS_SCAN_TOTAL_LIMIT 262144UL
+#define MS_RESIDENT_MIN_SIZE 26UL
+#define MS_RTC_MATCHWORD 0x4AFCU
 
 typedef struct {
     unsigned long header_address;
@@ -27,12 +32,32 @@ typedef struct {
 } MSResident;
 
 typedef struct {
+    unsigned long address;
+    unsigned long end_skip;
+    unsigned long init;
+    unsigned long name_ptr;
+    unsigned long id_string_ptr;
+    unsigned int flags;
+    unsigned int version;
+    unsigned int type;
+    int priority;
+    unsigned int region_index;
+    unsigned int registered_resmodule;
+} MSCandidate;
+
+typedef struct {
     MSRecord records[MS_MAX_RECORDS];
     unsigned int count;
     MSResident residents[MS_MAX_RESIDENTS];
     unsigned int resident_count;
+    MSCandidate candidates[MS_MAX_CANDIDATES];
+    unsigned int candidate_count;
+    unsigned long scan_bytes;
+    unsigned int scan_regions;
     unsigned int truncated;
     unsigned int residents_truncated;
+    unsigned int candidates_truncated;
+    unsigned int scan_limited;
 } MSSnapshot;
 
 typedef struct {
@@ -91,6 +116,40 @@ static void add_resident(MSSnapshot *s, unsigned long address,
     r->type = type;
     r->priority = priority;
     copy_name(r->name, sizeof(r->name), name);
+}
+
+static int is_registered_resident(const MSSnapshot *s, unsigned long address)
+{
+    unsigned int i;
+    for (i = 0; i < s->resident_count; ++i)
+        if (s->residents[i].address == address) return 1;
+    return 0;
+}
+
+static void add_candidate(MSSnapshot *s, unsigned int region_index,
+                          unsigned long address, unsigned long end_skip,
+                          unsigned long init, unsigned long name_ptr,
+                          unsigned long id_string_ptr, unsigned int flags,
+                          unsigned int version, unsigned int type,
+                          int priority)
+{
+    MSCandidate *c;
+    if (s->candidate_count >= MS_MAX_CANDIDATES) {
+        s->candidates_truncated = 1;
+        return;
+    }
+    c = &s->candidates[s->candidate_count++];
+    c->region_index = region_index;
+    c->address = address;
+    c->end_skip = end_skip;
+    c->init = init;
+    c->name_ptr = name_ptr;
+    c->id_string_ptr = id_string_ptr;
+    c->flags = flags;
+    c->version = version;
+    c->type = type;
+    c->priority = priority;
+    c->registered_resmodule = (unsigned int)is_registered_resident(s, address);
 }
 
 #if defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
@@ -215,6 +274,109 @@ static int containing_region(const MSSnapshot *s, unsigned long address)
     return -1;
 }
 
+static unsigned long read_be32(const volatile unsigned char *p)
+{
+    return ((unsigned long)p[0] << 24) |
+           ((unsigned long)p[1] << 16) |
+           ((unsigned long)p[2] << 8) |
+           (unsigned long)p[3];
+}
+
+static void scan_buffer_for_residents(MSSnapshot *s, unsigned int region_index,
+                                      unsigned long base,
+                                      const volatile unsigned char *buf,
+                                      unsigned long length,
+                                      unsigned long region_upper)
+{
+    unsigned long off;
+    for (off = 0; off + MS_RESIDENT_MIN_SIZE <= length; off += 2) {
+        const volatile unsigned char *p = buf + off;
+        unsigned long address;
+        unsigned long match_tag;
+        unsigned long end_skip;
+        unsigned long name_ptr;
+        unsigned long id_string_ptr;
+        unsigned long init;
+        if ((((unsigned int)p[0] << 8) | (unsigned int)p[1]) != MS_RTC_MATCHWORD)
+            continue;
+        address = base + off;
+        match_tag = read_be32(p + 2);
+        if (match_tag != address) continue;
+        end_skip = read_be32(p + 6);
+        if (end_skip <= address || end_skip > region_upper) continue;
+        name_ptr = read_be32(p + 14);
+        id_string_ptr = read_be32(p + 18);
+        init = read_be32(p + 22);
+        add_candidate(s, region_index, address, end_skip, init,
+                      name_ptr, id_string_ptr,
+                      (unsigned int)p[10], (unsigned int)p[11],
+                      (unsigned int)p[12], (int)(signed char)p[13]);
+        if (s->candidates_truncated) return;
+    }
+}
+
+#if defined(__amigaos__) || defined(__AMIGA__) || defined(AMIGA)
+static void scan_snapshot_for_residents(MSSnapshot *s)
+{
+    unsigned int i;
+    unsigned long total_left = MS_SCAN_TOTAL_LIMIT;
+    for (i = 0; i < s->count && total_left > 0; ++i) {
+        const MSRecord *r = &s->records[i];
+        unsigned long length;
+        const volatile unsigned char *buf;
+        if (r->upper <= r->lower) continue;
+        length = r->upper - r->lower;
+        if (length > MS_SCAN_REGION_LIMIT) {
+            length = MS_SCAN_REGION_LIMIT;
+            s->scan_limited = 1;
+        }
+        if (length > total_left) {
+            length = total_left;
+            s->scan_limited = 1;
+        }
+        if (length < MS_RESIDENT_MIN_SIZE) continue;
+        buf = (const volatile unsigned char *)r->lower;
+        scan_buffer_for_residents(s, i, r->lower, buf, length, r->upper);
+        s->scan_bytes += length;
+        ++s->scan_regions;
+        total_left -= length;
+        if (s->candidates_truncated) break;
+    }
+    if (total_left == 0 && s->count > s->scan_regions) s->scan_limited = 1;
+}
+#else
+static void write_be32(unsigned char *p, unsigned long value)
+{
+    p[0] = (unsigned char)((value >> 24) & 0xFFUL);
+    p[1] = (unsigned char)((value >> 16) & 0xFFUL);
+    p[2] = (unsigned char)((value >> 8) & 0xFFUL);
+    p[3] = (unsigned char)(value & 0xFFUL);
+}
+
+static void scan_snapshot_for_residents(MSSnapshot *s)
+{
+    unsigned char buf[128];
+    unsigned long base = 0x10000000UL;
+    unsigned long off = 16UL;
+    memset(buf, 0, sizeof(buf));
+    buf[off + 0] = 0x4A;
+    buf[off + 1] = 0xFC;
+    write_be32(buf + off + 2, base + off);
+    write_be32(buf + off + 6, base + 96UL);
+    buf[off + 10] = 0x01;
+    buf[off + 11] = 42;
+    buf[off + 12] = 9;
+    buf[off + 13] = 5;
+    write_be32(buf + off + 14, base + 80UL);
+    write_be32(buf + off + 18, base + 88UL);
+    write_be32(buf + off + 22, base + 64UL);
+    scan_buffer_for_residents(s, 0, base, buf, (unsigned long)sizeof(buf),
+                              base + (unsigned long)sizeof(buf));
+    s->scan_bytes = (unsigned long)sizeof(buf);
+    s->scan_regions = 1;
+}
+#endif
+
 static void print_indicator_human(const MSHeuristics *h)
 {
     int first = 1;
@@ -336,9 +498,62 @@ static void print_residents_kv(const MSSnapshot *s)
     printf("truncated=%s\n", s->residents_truncated ? "true" : "false");
 }
 
+static void print_candidates_human(const MSSnapshot *s)
+{
+    unsigned int i;
+    printf("MemScan bounded resident-signature scan\n");
+    for (i = 0; i < s->candidate_count; ++i) {
+        const MSCandidate *c = &s->candidates[i];
+        printf("%08lX end=%08lX init=%08lX ver=%u type=%u flags=%02X pri=%d region=%u registered=%s\n",
+               c->address, c->end_skip, c->init, c->version, c->type,
+               c->flags, c->priority, c->region_index,
+               c->registered_resmodule ? "true" : "false");
+    }
+    printf("candidate_count=%u scan_regions=%u scan_bytes=%lu limited=%s truncated=%s\n",
+           s->candidate_count, s->scan_regions, s->scan_bytes,
+           s->scan_limited ? "true" : "false",
+           s->candidates_truncated ? "true" : "false");
+}
+
+static void print_candidates_kv(const MSSnapshot *s)
+{
+    unsigned int i;
+    printf("tool=MemScan\n");
+    printf("schema=amiforensics.snapshot.kv/1\n");
+    printf("mode=resident-signature-scan\n");
+    printf("scan_source=memheader-bounded\n");
+    printf("scan_region_limit=%lu\n", MS_SCAN_REGION_LIMIT);
+    printf("scan_total_limit=%lu\n", MS_SCAN_TOTAL_LIMIT);
+    for (i = 0; i < s->candidate_count; ++i) {
+        const MSCandidate *c = &s->candidates[i];
+        printf("record.%u.kind=resident-candidate\n", i);
+        printf("record.%u.address=%08lX\n", i, c->address);
+        printf("record.%u.end_skip=%08lX\n", i, c->end_skip);
+        printf("record.%u.init=%08lX\n", i, c->init);
+        printf("record.%u.name_ptr=%08lX\n", i, c->name_ptr);
+        printf("record.%u.id_string_ptr=%08lX\n", i, c->id_string_ptr);
+        printf("record.%u.flags=%02X\n", i, c->flags);
+        printf("record.%u.version=%u\n", i, c->version);
+        printf("record.%u.type=%u\n", i, c->type);
+        printf("record.%u.priority=%d\n", i, c->priority);
+        printf("record.%u.matchword_valid=true\n", i);
+        printf("record.%u.self_match_valid=true\n", i);
+        printf("record.%u.endskip_valid=true\n", i);
+        printf("record.%u.region_index=%u\n", i, c->region_index);
+        printf("record.%u.registered_resmodule=%s\n", i,
+               c->registered_resmodule ? "true" : "false");
+    }
+    printf("record_count=%u\n", s->candidate_count);
+    printf("source_region_count=%u\n", s->count);
+    printf("scan_region_count=%u\n", s->scan_regions);
+    printf("scan_bytes=%lu\n", s->scan_bytes);
+    printf("scan_limited=%s\n", s->scan_limited ? "true" : "false");
+    printf("truncated=%s\n", s->candidates_truncated ? "true" : "false");
+}
+
 static void usage(void)
 {
-    fprintf(stderr, "Usage: MemScan [--kv] [--suspicious | --discover-residents]\n");
+    fprintf(stderr, "Usage: MemScan [--kv] [--suspicious | --discover-residents | --scan-residents]\n");
 }
 
 int main(int argc, char **argv)
@@ -347,6 +562,7 @@ int main(int argc, char **argv)
     int kv = 0;
     int suspicious_only = 0;
     int discover_residents = 0;
+    int scan_residents = 0;
     int i;
     int rc;
 
@@ -354,12 +570,14 @@ int main(int argc, char **argv)
         if (strcmp(argv[i], "--kv") == 0) kv = 1;
         else if (strcmp(argv[i], "--suspicious") == 0) suspicious_only = 1;
         else if (strcmp(argv[i], "--discover-residents") == 0) discover_residents = 1;
+        else if (strcmp(argv[i], "--scan-residents") == 0) scan_residents = 1;
         else {
             usage();
             return 10;
         }
     }
-    if (suspicious_only && discover_residents) {
+    if ((suspicious_only ? 1 : 0) + (discover_residents ? 1 : 0) +
+        (scan_residents ? 1 : 0) > 1) {
         usage();
         return 10;
     }
@@ -372,7 +590,12 @@ int main(int argc, char **argv)
     memset(snapshot, 0, sizeof(*snapshot));
     take_snapshot(snapshot);
 
-    if (discover_residents) {
+    if (scan_residents) {
+        scan_snapshot_for_residents(snapshot);
+        if (kv) print_candidates_kv(snapshot);
+        else print_candidates_human(snapshot);
+        rc = (snapshot->candidates_truncated || snapshot->scan_limited) ? 5 : 0;
+    } else if (discover_residents) {
         if (kv) print_residents_kv(snapshot);
         else print_residents_human(snapshot);
         rc = snapshot->residents_truncated ? 5 : 0;
