@@ -1,0 +1,60 @@
+name: M4.2 TraceExec task lifecycle watch qualification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  traceexec-task-watch-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native TraceExec build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-traceexec.sh
+      - name: Gate 2 - host bounded task lifecycle contract
+        shell: bash
+        run: |
+          make clean
+          make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror -Wno-unused-function' TraceExec
+          ./TraceExec --kv --watch-tasks 3 --interval 1 | tee host-traceexec-task-watch.txt
+          grep -F 'tool=TraceExec' host-traceexec-task-watch.txt
+          grep -F 'schema=amiforensics.trace.kv/1' host-traceexec-task-watch.txt
+          grep -F 'mode=task-lifecycle-watch' host-traceexec-task-watch.txt
+          grep -F 'hooking=false' host-traceexec-task-watch.txt
+          grep -F 'samples_requested=3' host-traceexec-task-watch.txt
+          grep -F 'interval_ticks=1' host-traceexec-task-watch.txt
+          grep -F 'record.0.event=task-added' host-traceexec-task-watch.txt
+          grep -F 'record.0.name=host-task-c' host-traceexec-task-watch.txt
+          grep -F 'record.1.event=task-removed' host-traceexec-task-watch.txt
+          grep -F 'record.1.name=host-task-b' host-traceexec-task-watch.txt
+          grep -F 'record_count=2' host-traceexec-task-watch.txt
+          grep -F 'taskset_truncated=false' host-traceexec-task-watch.txt
+          grep -F 'truncated=false' host-traceexec-task-watch.txt
+          ! ./TraceExec --watch-tasks 1
+          ! ./TraceExec --watch-tasks 17
+          ! ./TraceExec --interval 1
+      - name: Gate 3 - execute bounded task watch in AROS guest
+        run: bash ci/fs-uae/run-aros-traceexec-task-watch.sh
+      - name: Upload qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-2-traceexec-task-watch-qualification
+          path: |
+            build/fs-uae/native-traceexec/TraceExec
+            build/fs-uae/native-traceexec/TraceExec.sha256
+            build/fs-uae/native-traceexec/file.txt
+            build/fs-uae/native-traceexec/result.txt
+            build/fs-uae/native-traceexec/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-traceexec-task-watch/result.txt
+            build/fs-uae/aros-traceexec-task-watch/fs-uae.log
+            build/fs-uae/aros-traceexec-task-watch/fs-uae-version.txt
+            build/fs-uae/aros-traceexec-task-watch/aros-traceexec-task-watch.fs-uae
+            host-traceexec-task-watch.txt
