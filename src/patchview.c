@@ -30,14 +30,14 @@ static unsigned long crc32_update(unsigned long crc, const unsigned char *data,
                                   unsigned int len)
 {
     unsigned int i;
-    crc = ~crc;
+    crc = (~crc) & 0xFFFFFFFFUL;
     for (i = 0; i < len; ++i) {
         unsigned int bit;
         crc ^= (unsigned long)data[i];
         for (bit = 0; bit < 8; ++bit)
             crc = (crc >> 1) ^ (0xEDB88320UL & (0UL - (crc & 1UL)));
     }
-    return ~crc;
+    return (~crc) & 0xFFFFFFFFUL;
 }
 
 static void usage(void)
