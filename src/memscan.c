@@ -144,12 +144,6 @@ static const char *risk_level(const MSHeuristics *h)
     return "none";
 }
 
-static int is_suspicious(const MSRecord *r)
-{
-    MSHeuristics h = evaluate(r);
-    return h.count != 0;
-}
-
 static void print_indicator_human(const MSHeuristics *h)
 {
     int first = 1;
