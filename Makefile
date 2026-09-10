@@ -2,7 +2,7 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView
+TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView
 
 .PHONY: all clean check
 
@@ -30,6 +30,9 @@ TaskView: src/taskview.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 ProcessView: src/processview.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+PortView: src/portview.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 check:
@@ -61,6 +64,10 @@ check:
 	@grep -q 'TaskReady' src/processview.c
 	@grep -q 'TaskWait' src/processview.c
 	@grep -q 'Forbid' src/processview.c
+	@grep -q 'PortList' src/portview.c
+	@grep -q 'mp_SigBit' src/portview.c
+	@grep -q 'mp_SigTask' src/portview.c
+	@grep -q 'Forbid' src/portview.c
 	@echo "static checks: PASS"
 
 clean:
