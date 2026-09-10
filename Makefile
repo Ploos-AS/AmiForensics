@@ -2,7 +2,7 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump TraceExec
+TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump TraceExec DiskWatch
 
 .PHONY: all clean check
 
@@ -42,6 +42,9 @@ SampleDump: src/sampledump.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 TraceExec: src/traceexec.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+DiskWatch: src/diskwatch.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 check:
@@ -91,6 +94,11 @@ check:
 	@grep -q 'FindTask' src/traceexec.c
 	@grep -q 'hooking=false' src/traceexec.c
 	@grep -q 'amiforensics.trace.kv/1' src/traceexec.c
+	@grep -q 'DW_MAX_EVENTS' src/diskwatch.c
+	@grep -q 'TD_CHANGENUM' src/diskwatch.c
+	@grep -q 'OpenDevice' src/diskwatch.c
+	@grep -q 'hooking=false' src/diskwatch.c
+	@grep -q 'amiforensics.trace.kv/1' src/diskwatch.c
 	@echo "static checks: PASS"
 
 clean:
