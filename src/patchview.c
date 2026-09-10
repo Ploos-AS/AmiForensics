@@ -5,6 +5,7 @@
 #define PV_DEFAULT_LIBRARY "exec.library"
 #define PV_DEFAULT_COUNT 32
 #define PV_MAX_COUNT 256
+#define PV_VECTOR_SIZE 6U
 
 typedef struct {
     unsigned int index;
@@ -14,6 +15,15 @@ typedef struct {
     unsigned long target;
     int direct_jmp;
 } PVRecord;
+
+typedef struct {
+    unsigned long library_base;
+    unsigned int neg_size;
+    unsigned int available_vectors;
+    unsigned int requested_vectors;
+    unsigned int inspected_vectors;
+    int clipped;
+} PVSummary;
 
 static void usage(void)
 {
@@ -49,12 +59,14 @@ static struct Library *open_target(const char *name, int *must_close)
     return OpenLibrary((CONST_STRPTR)name, 0);
 }
 
-static int inspect_vectors(const char *name, unsigned int count, PVRecord *records,
-                           unsigned int *out_count)
+static int inspect_vectors(const char *name, unsigned int requested,
+                           PVRecord *records, PVSummary *summary)
 {
     struct Library *lib;
     int must_close = 0;
     unsigned int i;
+    unsigned int available;
+    unsigned int count;
 
     lib = open_target(name, &must_close);
     if (lib == NULL) {
@@ -62,45 +74,66 @@ static int inspect_vectors(const char *name, unsigned int count, PVRecord *recor
         return 20;
     }
 
+    available = (unsigned int)lib->lib_NegSize / PV_VECTOR_SIZE;
+    count = requested;
+    if (count > available) count = available;
+
+    summary->library_base = (unsigned long)lib;
+    summary->neg_size = (unsigned int)lib->lib_NegSize;
+    summary->available_vectors = available;
+    summary->requested_vectors = requested;
+    summary->inspected_vectors = count;
+    summary->clipped = (count != requested);
+
     for (i = 0; i < count; ++i) {
-        unsigned char *v = ((unsigned char *)lib) - (6UL * (i + 1UL));
+        unsigned char *v = ((unsigned char *)lib) - (PV_VECTOR_SIZE * (i + 1UL));
         PVRecord *r = &records[i];
         r->index = i + 1;
-        r->lvo = -(long)(6UL * (i + 1UL));
+        r->lvo = -(long)(PV_VECTOR_SIZE * (i + 1UL));
         r->vector_address = (unsigned long)v;
         r->opcode = read_be16(v);
         r->direct_jmp = (r->opcode == 0x4EF9U);
         r->target = r->direct_jmp ? read_be32(v + 2) : 0;
     }
-    *out_count = count;
 
     if (must_close) CloseLibrary(lib);
     return 0;
 }
 #else
-static int inspect_vectors(const char *name, unsigned int count, PVRecord *records,
-                           unsigned int *out_count)
+static int inspect_vectors(const char *name, unsigned int requested,
+                           PVRecord *records, PVSummary *summary)
 {
     unsigned int i;
     (void)name;
-    for (i = 0; i < count; ++i) {
+
+    summary->library_base = 0x1000UL;
+    summary->neg_size = (unsigned int)(PV_MAX_COUNT * PV_VECTOR_SIZE);
+    summary->available_vectors = PV_MAX_COUNT;
+    summary->requested_vectors = requested;
+    summary->inspected_vectors = requested;
+    summary->clipped = 0;
+
+    for (i = 0; i < requested; ++i) {
         records[i].index = i + 1;
-        records[i].lvo = -(long)(6UL * (i + 1UL));
-        records[i].vector_address = 0x1000UL - (6UL * (i + 1UL));
+        records[i].lvo = -(long)(PV_VECTOR_SIZE * (i + 1UL));
+        records[i].vector_address = 0x1000UL - (PV_VECTOR_SIZE * (i + 1UL));
         records[i].opcode = 0x4EF9U;
         records[i].target = 0x2000UL + (unsigned long)(i * 16UL);
         records[i].direct_jmp = 1;
     }
-    *out_count = count;
     return 0;
 }
 #endif
 
-static void print_human(const char *library, const PVRecord *records, unsigned int count)
+static void print_human(const char *library, const PVRecord *records,
+                        const PVSummary *summary)
 {
     unsigned int i;
     printf("PatchView library vectors: %s\n", library);
-    for (i = 0; i < count; ++i) {
+    printf("base=%08lX neg_size=%u available=%u inspected=%u\n",
+           summary->library_base, summary->neg_size,
+           summary->available_vectors, summary->inspected_vectors);
+    for (i = 0; i < summary->inspected_vectors; ++i) {
         const PVRecord *r = &records[i];
         printf("%3u LVO %5ld vector=%08lX opcode=%04X", r->index, r->lvo,
                r->vector_address, r->opcode);
@@ -110,14 +143,23 @@ static void print_human(const char *library, const PVRecord *records, unsigned i
             printf(" target=-------- non-JMP");
         putchar('\n');
     }
+    if (summary->clipped)
+        printf("WARNING: requested %u vectors, library exposes only %u complete 6-byte entries\n",
+               summary->requested_vectors, summary->available_vectors);
 }
 
-static void print_kv(const char *library, const PVRecord *records, unsigned int count)
+static void print_kv(const char *library, const PVRecord *records,
+                     const PVSummary *summary)
 {
     unsigned int i;
     printf("tool=PatchView\n");
     printf("library=%s\n", library);
-    for (i = 0; i < count; ++i) {
+    printf("library_base=%08lX\n", summary->library_base);
+    printf("neg_size=%u\n", summary->neg_size);
+    printf("available_vectors=%u\n", summary->available_vectors);
+    printf("requested_vectors=%u\n", summary->requested_vectors);
+    printf("clipped=%s\n", summary->clipped ? "true" : "false");
+    for (i = 0; i < summary->inspected_vectors; ++i) {
         const PVRecord *r = &records[i];
         printf("record.%u.index=%u\n", i, r->index);
         printf("record.%u.lvo=%ld\n", i, r->lvo);
@@ -126,7 +168,7 @@ static void print_kv(const char *library, const PVRecord *records, unsigned int 
         printf("record.%u.direct_jmp=%s\n", i, r->direct_jmp ? "true" : "false");
         printf("record.%u.target=%08lX\n", i, r->target);
     }
-    printf("record_count=%u\n", count);
+    printf("record_count=%u\n", summary->inspected_vectors);
 }
 
 int main(int argc, char **argv)
@@ -136,8 +178,10 @@ int main(int argc, char **argv)
     int kv = 0;
     int i;
     PVRecord *records;
-    unsigned int actual = 0;
+    PVSummary summary;
     int rc;
+
+    memset(&summary, 0, sizeof(summary));
 
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--kv") == 0) {
@@ -164,10 +208,11 @@ int main(int argc, char **argv)
         return 20;
     }
 
-    rc = inspect_vectors(library, count, records, &actual);
+    rc = inspect_vectors(library, count, records, &summary);
     if (rc == 0) {
-        if (kv) print_kv(library, records, actual);
-        else print_human(library, records, actual);
+        if (kv) print_kv(library, records, &summary);
+        else print_human(library, records, &summary);
+        if (summary.clipped) rc = 5;
     }
     free(records);
     return rc;
