@@ -125,4 +125,20 @@ jobs:
           grep -F 'library=dos.library' patchview-kv.txt
           grep -F 'record.0.lvo=-6' patchview-kv.txt
           grep -F 'record.0.direct_jmp=true' patchview-kv.txt
+          grep -E '^vector_crc32=[0-9A-F]{8}$' patchview-kv.txt
           grep -F 'record_count=2' patchview-kv.txt
+      - name: Exercise TaskView host interface
+        shell: bash
+        run: |
+          ./TaskView | tee taskview.txt
+          grep -F 'TaskView task snapshot' taskview.txt
+          grep -F 'current' taskview.txt
+          grep -F 'ready.example' taskview.txt
+          grep -F 'wait.example' taskview.txt
+          ./TaskView --kv --state ready | tee taskview-kv.txt
+          grep -F 'tool=TaskView' taskview-kv.txt
+          grep -F 'filter_state=ready' taskview-kv.txt
+          grep -F 'record.0.state=ready' taskview-kv.txt
+          grep -F 'record.0.name=ready.example' taskview-kv.txt
+          grep -F 'record_count=1' taskview-kv.txt
+          grep -F 'truncated=false' taskview-kv.txt
