@@ -217,3 +217,24 @@ jobs:
           grep -F 'record.0.indicator.free_exceeds_range=true' memscan-suspicious-kv.txt
           grep -F 'record.0.indicator.odd_boundary=true' memscan-suspicious-kv.txt
           grep -F 'record.0.indicator.unnamed=true' memscan-suspicious-kv.txt
+      - name: Exercise MemScan M3.3b bounded resident scan
+        shell: bash
+        run: |
+          set +e
+          ./MemScan --kv --scan-residents | tee memscan-resident-scan-kv.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          test "$rc" -eq 0
+          grep -F 'mode=resident-signature-scan' memscan-resident-scan-kv.txt
+          grep -F 'scan_source=memheader-bounded' memscan-resident-scan-kv.txt
+          grep -F 'scan_region_limit=65536' memscan-resident-scan-kv.txt
+          grep -F 'scan_total_limit=262144' memscan-resident-scan-kv.txt
+          grep -F 'record.0.kind=resident-candidate' memscan-resident-scan-kv.txt
+          grep -F 'record.0.matchword_valid=true' memscan-resident-scan-kv.txt
+          grep -F 'record.0.self_match_valid=true' memscan-resident-scan-kv.txt
+          grep -F 'record.0.endskip_valid=true' memscan-resident-scan-kv.txt
+          grep -F 'record.0.registered_resmodule=false' memscan-resident-scan-kv.txt
+          grep -F 'record_count=1' memscan-resident-scan-kv.txt
+          grep -F 'scan_bytes=128' memscan-resident-scan-kv.txt
+          grep -F 'scan_limited=false' memscan-resident-scan-kv.txt
+          grep -F 'truncated=false' memscan-resident-scan-kv.txt
