@@ -2,7 +2,7 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView
+TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan
 
 .PHONY: all clean check
 
@@ -33,6 +33,9 @@ ProcessView: src/processview.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 PortView: src/portview.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+MemScan: src/memscan.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 check:
@@ -68,6 +71,12 @@ check:
 	@grep -q 'mp_SigBit' src/portview.c
 	@grep -q 'mp_SigTask' src/portview.c
 	@grep -q 'Forbid' src/portview.c
+	@grep -q 'MemList' src/memscan.c
+	@grep -q 'mh_Lower' src/memscan.c
+	@grep -q 'mh_Upper' src/memscan.c
+	@grep -q 'mh_Free' src/memscan.c
+	@grep -q 'mh_Attributes' src/memscan.c
+	@grep -q 'Forbid' src/memscan.c
 	@echo "static checks: PASS"
 
 clean:
