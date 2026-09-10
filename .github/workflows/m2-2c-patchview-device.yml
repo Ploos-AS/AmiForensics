@@ -1,0 +1,39 @@
+name: M2.2c PatchView device qualification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  patchview-device-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native PatchView build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-patchview.sh
+      - name: Gate 2 - execute PatchView trackdisk.device inspection in AROS guest
+        run: bash ci/fs-uae/run-aros-patchview-device.sh
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-2c-patchview-device-qualification
+          path: |
+            build/fs-uae/native-patchview/PatchView
+            build/fs-uae/native-patchview/PatchView.sha256
+            build/fs-uae/native-patchview/file.txt
+            build/fs-uae/native-patchview/result.txt
+            build/fs-uae/native-patchview/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-patchview-device/result.txt
+            build/fs-uae/aros-patchview-device/fs-uae.log
+            build/fs-uae/aros-patchview-device/fs-uae-version.txt
+            build/fs-uae/aros-patchview-device/aros-patchview-device.fs-uae
