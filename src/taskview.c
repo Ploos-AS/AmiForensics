@@ -121,10 +121,12 @@ static void print_kv(const TVSnapshot *snapshot, const char *state)
 {
     unsigned int i, out = 0;
     printf("tool=TaskView\n");
+    printf("schema=amiforensics.snapshot.kv/1\n");
     printf("filter_state=%s\n", state);
     for (i = 0; i < snapshot->count; ++i) {
         const TVRecord *r = &snapshot->records[i];
         if (!state_matches(state, r->state)) continue;
+        printf("record.%u.kind=task\n", out);
         printf("record.%u.state=%s\n", out, r->state);
         printf("record.%u.name=%s\n", out, r->name);
         printf("record.%u.address=%08lX\n", out, r->address);
