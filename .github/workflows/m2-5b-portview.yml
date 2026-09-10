@@ -1,0 +1,39 @@
+name: M2.5b PortView qualification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  portview-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native PortView build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-portview.sh
+      - name: Gate 2 - execute PortView in AROS guest
+        run: bash ci/fs-uae/run-aros-portview.sh
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-5b-portview-qualification
+          path: |
+            build/fs-uae/native-portview/PortView
+            build/fs-uae/native-portview/PortView.sha256
+            build/fs-uae/native-portview/file.txt
+            build/fs-uae/native-portview/result.txt
+            build/fs-uae/native-portview/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-portview/result.txt
+            build/fs-uae/aros-portview/fs-uae.log
+            build/fs-uae/aros-portview/fs-uae-version.txt
+            build/fs-uae/aros-portview/aros-portview.fs-uae
