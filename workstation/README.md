@@ -18,9 +18,10 @@ This directory contains the host-side orchestration layer for controlled Amiga m
 A prepared run is created under `workstation/runs/<run-id>/`:
 
 - `input/` — copied sample
-- `artifacts/` — guest/host output collected after analysis
+- `artifacts/` — collected guest/host output
 - `logs/` — orchestration and emulator logs
 - `profile/` — rendered emulator profile
+- `snapshots/` — normalized pre/post workstation snapshots
 - `manifest.json` — normalized run metadata
 
 ## M5.1 — Workstation foundation
@@ -61,4 +62,31 @@ python3 workstation/run_fsuae.py /tmp/amiforensics-runs/<run-id> --start
 
 Starting FS-UAE does not auto-run the sample. The run directory is mounted separately so later guest-side tooling can collect controlled artifacts without modifying the original source file.
 
-The default profile disables `bsdsocket_library`; network-capable analysis will require a separate explicitly opted-in profile in a later milestone.
+The default profile disables `bsdsocket_library`; network-capable analysis requires a separate explicitly opted-in profile.
+
+## M5.3 — Snapshots and artifact collection
+
+Capture a normalized pre-analysis snapshot:
+
+```sh
+python3 workstation/snapshot.py /tmp/amiforensics-runs/<run-id> pre
+```
+
+After the controlled analysis session, capture the post-analysis state:
+
+```sh
+python3 workstation/snapshot.py /tmp/amiforensics-runs/<run-id> post
+```
+
+Snapshots inventory workstation-visible `artifacts/`, `logs/` and `profile/` trees with size, timestamp and SHA-256 metadata. They are intended as stable input for the future `Compare` tool.
+
+Collect only explicitly selected files:
+
+```sh
+python3 workstation/collect_artifacts.py \
+  /tmp/amiforensics-runs/<run-id> \
+  /path/to/output1 /path/to/output2 \
+  --label guest
+```
+
+Collected files are copied below `artifacts/<label>/`, made read-only, hashed with SHA-256 and described by an `index.json`. The run manifest records each collection. The collector never recursively sweeps arbitrary host directories and does not execute collected files.
