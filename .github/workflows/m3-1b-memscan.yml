@@ -1,0 +1,39 @@
+name: M3.1b MemScan qualification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  memscan-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native MemScan build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-memscan.sh
+      - name: Gate 2 - execute MemScan in AROS guest
+        run: bash ci/fs-uae/run-aros-memscan.sh
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-1b-memscan-qualification
+          path: |
+            build/fs-uae/native-memscan/MemScan
+            build/fs-uae/native-memscan/MemScan.sha256
+            build/fs-uae/native-memscan/file.txt
+            build/fs-uae/native-memscan/result.txt
+            build/fs-uae/native-memscan/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-memscan/result.txt
+            build/fs-uae/aros-memscan/fs-uae.log
+            build/fs-uae/aros-memscan/fs-uae-version.txt
+            build/fs-uae/aros-memscan/aros-memscan.fs-uae
