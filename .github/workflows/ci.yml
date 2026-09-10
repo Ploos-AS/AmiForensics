@@ -149,3 +149,16 @@ jobs:
           grep -F 'record.0.name=ready.example' taskview-kv.txt
           grep -F 'record_count=1' taskview-kv.txt
           grep -F 'truncated=false' taskview-kv.txt
+      - name: Exercise PortView host interface
+        shell: bash
+        run: |
+          ./PortView | tee portview.txt
+          grep -F 'PortView message port snapshot' portview.txt
+          grep -F 'REXX' portview.txt
+          grep -F 'WORKBENCH' portview.txt
+          ./PortView --kv --name REXX | tee portview-kv.txt
+          grep -F 'tool=PortView' portview-kv.txt
+          grep -F 'filter_name=REXX' portview-kv.txt
+          grep -F 'record.0.name=REXX' portview-kv.txt
+          grep -F 'record_count=1' portview-kv.txt
+          grep -F 'truncated=false' portview-kv.txt
