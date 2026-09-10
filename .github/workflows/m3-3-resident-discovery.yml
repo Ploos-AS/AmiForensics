@@ -1,0 +1,54 @@
+name: M3.3 MemScan resident discovery qualification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  resident-discovery-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FS-UAE runtime tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fs-uae xvfb curl lhasa file p7zip-full unzip
+      - name: Gate 1 - native MemScan build with pinned Bebbo toolchain
+        run: bash ci/fs-uae/build-native-memscan.sh
+      - name: Gate 2 - host resident discovery contract
+        run: |
+          make clean
+          make CC=gcc CFLAGS='-O2 -Wall -Wextra -Werror -Wno-unused-function' MemScan
+          ./MemScan --kv --discover-residents | tee host-residents.txt
+          grep -F 'tool=MemScan' host-residents.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' host-residents.txt
+          grep -F 'mode=resident-code-discovery' host-residents.txt
+          grep -F 'discovery_source=exec-resmodules' host-residents.txt
+          grep -F 'record.0.kind=resident-code' host-residents.txt
+          grep -F 'record.0.name=host-resident-stub' host-residents.txt
+          grep -F 'record.0.match_valid=true' host-residents.txt
+          grep -F 'record.0.region_index=0' host-residents.txt
+          grep -F 'record_count=1' host-residents.txt
+          ! ./MemScan --suspicious --discover-residents
+      - name: Gate 3 - execute resident discovery in AROS guest
+        run: bash ci/fs-uae/run-aros-memscan-residents.sh
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-3-resident-discovery-qualification
+          path: |
+            build/fs-uae/native-memscan/MemScan
+            build/fs-uae/native-memscan/MemScan.sha256
+            build/fs-uae/native-memscan/file.txt
+            build/fs-uae/native-memscan/result.txt
+            build/fs-uae/native-memscan/toolchain-image.txt
+            build/fs-uae/aros-system/source.txt
+            build/fs-uae/aros-system/archive.sha256
+            build/fs-uae/aros-memscan-residents/result.txt
+            build/fs-uae/aros-memscan-residents/fs-uae.log
+            build/fs-uae/aros-memscan-residents/fs-uae-version.txt
+            build/fs-uae/aros-memscan-residents/aros-memscan-residents.fs-uae
+            host-residents.txt
