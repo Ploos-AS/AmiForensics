@@ -187,3 +187,19 @@ jobs:
           grep -F 'record.0.name=REXX' portview-kv.txt
           grep -F 'record_count=1' portview-kv.txt
           grep -F 'truncated=false' portview-kv.txt
+      - name: Exercise MemScan M3.1 host interface
+        shell: bash
+        run: |
+          ./MemScan | tee memscan.txt
+          grep -F 'MemScan memory-region snapshot' memscan.txt
+          grep -F 'chip memory' memscan.txt
+          grep -F 'fast memory' memscan.txt
+          ./MemScan --kv | tee memscan-kv.txt
+          grep -F 'tool=MemScan' memscan-kv.txt
+          grep -F 'schema=amiforensics.snapshot.kv/1' memscan-kv.txt
+          grep -F 'mode=memory-region-inventory' memscan-kv.txt
+          grep -F 'record.0.kind=memory-region' memscan-kv.txt
+          grep -E '^record\.0\.lower=[0-9A-F]{8}$' memscan-kv.txt
+          grep -E '^record\.0\.upper=[0-9A-F]{8}$' memscan-kv.txt
+          grep -F 'record_count=2' memscan-kv.txt
+          grep -F 'truncated=false' memscan-kv.txt
