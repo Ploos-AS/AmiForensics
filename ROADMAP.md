@@ -80,6 +80,8 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 
 ## M5 — Analysis workstation
 
+Status: **IMPLEMENTED — qualification pending**
+
 ### M5.1 Workstation foundation — implemented
 
 - disposable run-directory contract
@@ -117,9 +119,19 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 - diff path recorded in the run manifest
 - stable workstation input for M6 Compare/Report
 
+### M5.5 Optional Ghidra integration — implemented
+
+- optional external Ghidra dependency; nothing bundled or downloaded
+- `analyzeHeadless` discovery through explicit path, `GHIDRA_HOME`, or `PATH`
+- dry-run command review by default
+- explicit `--analyze` opt-in
+- immutable prepared sample imported into a disposable project
+- static analysis only; sample is never executed
+- log, state and return code recorded in the run manifest
+
 ### Next
 
-- M5.5 optional Ghidra integration foundation
+- qualify the M5 workstation workflow end-to-end
 - M6 Compare/Report and normalized reporting workflow
 
 ## M6 — Reporting and automation
