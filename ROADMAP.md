@@ -213,7 +213,7 @@ Status: **CLOSED — CI qualification PASS**
 - baseline record: `docs/M7_1_BASELINE_AUDIT.md`
 - release manifest: `docs/RELEASE_v0.1.0.md`
 
-### M7.2 Integrated suite qualification — CI PENDING
+### M7.2 Integrated suite qualification — CLOSED / CI qualification PASS
 
 - integrated harness: `tools/qualify_m7_2.py`
 - strict host portability build of all 15 native commands
@@ -221,10 +221,13 @@ Status: **CLOSED — CI qualification PASS**
 - re-runs M6.1, M6.2 and M6.3 host/static qualification
 - re-runs M5 workstation, M6.4 JSON report and M6.5 batch qualification
 - emits packaged release artifact plus SHA-256 evidence
+- qualification record: `docs/M7_2_QUALIFICATION.md`
 - workflow: `.github/workflows/m7-2-integrated.yml`
+- GitHub Actions run 34578081028 completed successfully
+- qualified commit: `183833c269a5a234f73cf9517e216f062b42d9e9`
 - does not claim real Commodore AmigaOS runtime qualification
 
-### M7.3 Release candidate
+### M7.3 Release candidate — IN PROGRESS
 
 - version and changelog
 - packaged release artifacts with checksums
@@ -233,8 +236,7 @@ Status: **CLOSED — CI qualification PASS**
 
 ### Next
 
-- obtain M7.2 CI PASS and record qualification evidence
-- then prepare M7.3 v0.1.0 release candidate
+- prepare M7.3 v0.1.0 release-candidate metadata and final release gate
 - later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
 
 ## Initial release target
