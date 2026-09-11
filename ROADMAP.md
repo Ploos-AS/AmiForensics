@@ -177,17 +177,29 @@ Status: **CLOSED — host-side CI qualification PASS**
 - GitHub Actions run 34561448779 completed successfully
 - RexxMast/Amiga runtime qualification remains separate and UNVERIFIED
 
-### M6.4 Workstation JSON report — IMPLEMENTATION STARTED
+### M6.4 Workstation JSON report — CLOSED / CI qualification PASS
 
-- normalized host-side JSON report schema
-- aggregate prepared sample/run metadata and selected analysis evidence
-- deterministic output suitable for archiving and later UI/API consumption
-- no dynamic sample execution required
+- normalized `amiforensics.workstation.report/1` JSON schema
+- aggregates an existing run manifest and selected analysis evidence
+- manifest/evidence SHA-256 provenance
+- deterministic JSON output for identical inputs
+- bounded evidence count and evidence size
+- no dynamic sample execution
+- qualification harness: `workstation/qualify_m6_4.py`
+- qualification record: `docs/M6_4_QUALIFICATION.md`
+- GitHub Actions run 34561699368 completed successfully
+
+### M6.5 Batch analysis workflow — IMPLEMENTATION STARTED
+
+- prepare multiple samples as isolated workstation runs
+- produce machine-readable batch index/status
+- bounded sample count
+- no implicit emulator start or sample execution
+- continue-on-error semantics so one bad sample does not destroy the whole batch result
 
 ### Next
 
-- complete M6.4 workstation JSON report implementation and qualification
-- M6.5 batch-analysis workflow
+- complete M6.5 batch-analysis workflow and qualification
 - later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
 
 ## Initial release target
