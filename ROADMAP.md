@@ -166,11 +166,29 @@ Status: **CLOSED — host-side CI qualification PASS**
 - qualification record: `docs/M6_2_QUALIFICATION.md`
 - GitHub Actions run 34561039788 completed successfully
 
+### M6.3 ARexx automation — CLOSED / STATIC CI qualification PASS
+
+- `rexx/AFReport.rexx` orchestrates `Compare --kv` and `Report --kv`
+- explicit input/output paths and return-code propagation
+- bounded-input truncation (`RC 5`) preserved across the pipeline
+- no implicit sample execution or network activity
+- qualification harness: `tools/qualify_m6_3.py`
+- qualification record: `docs/M6_3_QUALIFICATION.md`
+- GitHub Actions run 34561448779 completed successfully
+- RexxMast/Amiga runtime qualification remains separate and UNVERIFIED
+
+### M6.4 Workstation JSON report — IMPLEMENTATION STARTED
+
+- normalized host-side JSON report schema
+- aggregate prepared sample/run metadata and selected analysis evidence
+- deterministic output suitable for archiving and later UI/API consumption
+- no dynamic sample execution required
+
 ### Next
 
-- M6.3 ARexx automation
-- normalized JSON/report schema on workstation side
-- batch-analysis workflow
+- complete M6.4 workstation JSON report implementation and qualification
+- M6.5 batch-analysis workflow
+- later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
 
 ## Initial release target
 
