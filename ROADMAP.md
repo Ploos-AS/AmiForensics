@@ -143,6 +143,8 @@ Status: **CLOSED — host-side CI qualification PASS**
 
 ## M6 — Reporting and automation
 
+Status: **CLOSED — CI qualification PASS**
+
 ### M6.1 Compare — CLOSED / CI qualification PASS
 
 - native AmigaOS 2.04+ / 68000-compatible `Compare` CLI
@@ -189,18 +191,45 @@ Status: **CLOSED — host-side CI qualification PASS**
 - qualification record: `docs/M6_4_QUALIFICATION.md`
 - GitHub Actions run 34561699368 completed successfully
 
-### M6.5 Batch analysis workflow — IMPLEMENTATION STARTED
+### M6.5 Batch analysis workflow — CLOSED / CI qualification PASS
 
 - prepare multiple samples as isolated workstation runs
-- produce machine-readable batch index/status
-- bounded sample count
+- machine-readable `amiforensics.workstation.batch/1` batch index/status
+- SHA-256 identity and immutable prepared sample copies
+- maximum 128 samples per batch
+- continue-on-error semantics with partial failure return code `5`
 - no implicit emulator start or sample execution
-- continue-on-error semantics so one bad sample does not destroy the whole batch result
+- qualification harness: `workstation/qualify_m6_5.py`
+- qualification record: `docs/M6_5_QUALIFICATION.md`
+- GitHub Actions run 34562026640 completed successfully
 
 ### Next
 
-- complete M6.5 batch-analysis workflow and qualification
+- M7 release engineering and integrated qualification
 - later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
+
+## M7 — Release engineering and integrated qualification
+
+### M7.1 Release baseline audit
+
+- reconcile README, ROADMAP and implemented tool inventory
+- verify build/install/package surfaces for the complete native suite
+- verify qualification records and CI coverage are internally consistent
+- define the first public release contents and acceptance gate
+
+### M7.2 Integrated suite qualification
+
+- build the complete native tool suite together
+- exercise representative static, inspection, memory, dynamic-observation and reporting paths
+- verify workstation/reporting interoperability
+- retain explicit separation between host-side, AROS/FS-UAE and real AmigaOS qualification claims
+
+### M7.3 Release candidate
+
+- version and changelog
+- packaged release artifacts with checksums
+- release notes and known limitations
+- final CI/repository gate before the first public release
 
 ## Initial release target
 
