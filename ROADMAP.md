@@ -227,17 +227,34 @@ Status: **CLOSED — CI qualification PASS**
 - qualified commit: `183833c269a5a234f73cf9517e216f062b42d9e9`
 - does not claim real Commodore AmigaOS runtime qualification
 
-### M7.3 Release candidate — IN PROGRESS
+### M7.2b Commodore AmigaOS runtime qualification — IN PROGRESS
 
-- version and changelog
+- release gate before Aminet distribution
+- primary runtime baseline: Commodore AmigaOS 2.04 with the 68000-compatible release build
+- compatibility regression: Commodore AmigaOS 3.1
+- visible local FS-UAE runtime with operator-supplied Commodore ROM/system files
+- 15 native commands qualified in three batches of five
+- Batch 1: FileInfo, Strings, HunkInfo, BootInfo, ResidentView
+- Batch 2: PatchView, TaskView, ProcessView, PortView, MemScan
+- Batch 3: SampleDump, TraceExec, DiskWatch, Compare, Report
+- separate RexxMast runtime qualification for `AFReport.rexx` after native Batch 3
+- qualification plan: `docs/M7_2B_AMIGAOS_RUNTIME_QUALIFICATION.md`
+- Batch 1 record: `docs/M7_2B_BATCH1_QUALIFICATION.md`
+
+### M7.3 Release candidate — BLOCKED BY M7.2b
+
+- version and changelog prepared
 - packaged release artifacts with checksums
+- Aminet `.lha` plus `.readme`
 - release notes and known limitations
 - final CI/repository gate before the first public release
 
 ### Next
 
-- prepare M7.3 v0.1.0 release-candidate metadata and final release gate
-- later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
+- run M7.2b Batch 1 locally on Commodore AmigaOS 2.04 and 3.1
+- then qualify Batches 2 and 3
+- run RexxMast runtime qualification for `AFReport.rexx`
+- resume M7.3 Aminet-ready v0.1.0 release candidate only after M7.2b passes
 
 ## Initial release target
 
