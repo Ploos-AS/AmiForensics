@@ -1,0 +1,27 @@
+name: M6.2 Report qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/report.c'
+      - 'tools/qualify_m6_2.py'
+      - '.github/workflows/m6-2-report.yml'
+      - 'Makefile'
+  pull_request:
+    paths:
+      - 'src/report.c'
+      - 'tools/qualify_m6_2.py'
+      - '.github/workflows/m6-2-report.yml'
+      - 'Makefile'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Qualify M6.2 Report
+        run: python3 tools/qualify_m6_2.py
