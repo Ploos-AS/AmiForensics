@@ -1,0 +1,23 @@
+name: M6.3 ARexx qualification
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'rexx/AFReport.rexx'
+      - 'tools/qualify_m6_3.py'
+      - '.github/workflows/m6-3-arexx.yml'
+  pull_request:
+    paths:
+      - 'rexx/AFReport.rexx'
+      - 'tools/qualify_m6_3.py'
+      - '.github/workflows/m6-3-arexx.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qualify M6.3 ARexx contract
+        run: python3 tools/qualify_m6_3.py
