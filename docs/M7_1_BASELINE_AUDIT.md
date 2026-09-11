@@ -1,6 +1,6 @@
 # M7.1 Release baseline audit
 
-Status: **IN PROGRESS**
+Status: **CLOSED — baseline reconciled**
 
 ## Repository baseline
 
@@ -10,7 +10,7 @@ M7.1 reconciles the repository before integrated qualification and the first pub
 
 ## Native tool inventory
 
-The Makefile currently builds 15 native commands:
+The Makefile builds 15 native commands:
 
 1. FileInfo
 2. Strings
@@ -28,7 +28,7 @@ The Makefile currently builds 15 native commands:
 14. Compare
 15. Report
 
-All are represented in the reconciled README.
+All are represented in the reconciled README and the frozen v0.1.0 release manifest.
 
 ## Workstation inventory
 
@@ -49,30 +49,32 @@ Dedicated workflows exist for the M2, M3, M4, M5 and M6 qualification slices, in
 
 M5 and M6 are formally closed for their documented host/static CI scopes. M2 and M3 are closed for their documented AROS/FS-UAE scopes. Real Commodore AmigaOS qualification remains separate.
 
-## Findings
-
-### Resolved during M7.1
+## Resolved during M7.1
 
 - README status was stale at M0 and has been reconciled with the implemented repository state.
 - README tool inventory omitted TaskView, ProcessView and PortView; the inventory now matches the 15 Makefile targets.
-- workstation, ARexx and qualification scope are now documented at top level.
+- workstation, ARexx and qualification scope are documented at top level.
+- Makefile now exposes explicit `install`, `package-stage`, `package-check` and `package` targets.
+- package layout is deterministic and contains all 15 native commands, ARexx automation and release documentation.
+- v0.1.0 content is frozen in `docs/RELEASE_v0.1.0.md`.
 
-### Release-gate gaps
+## Remaining release-gate work
 
-- no explicit install/package target is present in the Makefile yet
-- no single integrated qualification gate currently builds/checks the complete release surface as one M7 workflow
-- release version/changelog/artifact/checksum policy is not yet defined
-- real Commodore AmigaOS qualification remains outside the current automated closure scope
+- M7.2 must provide a single integrated qualification gate that exercises the complete release surface.
+- M7.3 must define changelog/release notes, artifact checksum generation and final release-candidate validation.
+- real Commodore AmigaOS qualification remains outside the current automated closure scope.
 
 ## M7.1 acceptance gate
 
-M7.1 can close when:
+- README/ROADMAP/tool inventory consistent — PASS
+- explicit install/package surface defined — PASS
+- first-release content set frozen — PASS
+- integrated M7.2 qualification inputs defined — PASS: complete native suite, package layout, ARexx/static contract and workstation/reporting interoperability
 
-- README/ROADMAP/tool inventory are consistent
-- an explicit install/package surface is defined
-- the first-release content set is frozen
-- integrated M7.2 qualification inputs are defined
+## Result
+
+M7.1 is closed. The repository baseline and v0.1.0 release contents are now frozen for M7.2 integrated qualification.
 
 ## Next
 
-Implement the release packaging/install surface and freeze the v0.1.0 content manifest before starting M7.2 integrated qualification.
+Implement M7.2 integrated qualification and CI around the frozen v0.1.0 release surface.
