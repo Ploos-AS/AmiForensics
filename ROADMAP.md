@@ -203,26 +203,26 @@ Status: **CLOSED — CI qualification PASS**
 - qualification record: `docs/M6_5_QUALIFICATION.md`
 - GitHub Actions run 34562026640 completed successfully
 
-### Next
-
-- M7 release engineering and integrated qualification
-- later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
-
 ## M7 — Release engineering and integrated qualification
 
-### M7.1 Release baseline audit
+### M7.1 Release baseline audit — CLOSED
 
-- reconcile README, ROADMAP and implemented tool inventory
-- verify build/install/package surfaces for the complete native suite
-- verify qualification records and CI coverage are internally consistent
-- define the first public release contents and acceptance gate
+- README, ROADMAP and implemented tool inventory reconciled
+- explicit install/package surfaces defined
+- v0.1.0 release contents frozen
+- baseline record: `docs/M7_1_BASELINE_AUDIT.md`
+- release manifest: `docs/RELEASE_v0.1.0.md`
 
-### M7.2 Integrated suite qualification
+### M7.2 Integrated suite qualification — CI PENDING
 
-- build the complete native tool suite together
-- exercise representative static, inspection, memory, dynamic-observation and reporting paths
-- verify workstation/reporting interoperability
-- retain explicit separation between host-side, AROS/FS-UAE and real AmigaOS qualification claims
+- integrated harness: `tools/qualify_m7_2.py`
+- strict host portability build of all 15 native commands
+- `make package` plus exact v0.1.0 package inventory validation
+- re-runs M6.1, M6.2 and M6.3 host/static qualification
+- re-runs M5 workstation, M6.4 JSON report and M6.5 batch qualification
+- emits packaged release artifact plus SHA-256 evidence
+- workflow: `.github/workflows/m7-2-integrated.yml`
+- does not claim real Commodore AmigaOS runtime qualification
 
 ### M7.3 Release candidate
 
@@ -231,13 +231,12 @@ Status: **CLOSED — CI qualification PASS**
 - release notes and known limitations
 - final CI/repository gate before the first public release
 
+### Next
+
+- obtain M7.2 CI PASS and record qualification evidence
+- then prepare M7.3 v0.1.0 release candidate
+- later ARexx runtime qualification in FS-UAE/AROS and/or real AmigaOS
+
 ## Initial release target
 
-The first public release should contain a meaningful static-analysis suite rather than a single proof-of-concept tool. Target contents:
-
-- FileInfo
-- Strings
-- HunkInfo
-- BootInfo
-- shared output/reporting support
-- documentation and qualification results
+The first public release is frozen as v0.1.0 and contains the complete 15-command native suite, `AFReport.rexx`, release documentation and qualification records as defined in `docs/RELEASE_v0.1.0.md`.
