@@ -2,7 +2,7 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
-TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump TraceExec DiskWatch
+TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump TraceExec DiskWatch Compare
 
 .PHONY: all clean check
 
@@ -45,6 +45,9 @@ TraceExec: src/traceexec.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 DiskWatch: src/diskwatch.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+Compare: src/compare.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 check:
@@ -99,6 +102,9 @@ check:
 	@grep -q 'OpenDevice' src/diskwatch.c
 	@grep -q 'hooking=false' src/diskwatch.c
 	@grep -q 'amiforensics.trace.kv/1' src/diskwatch.c
+	@grep -q 'CMP_MAX_RECORDS' src/compare.c
+	@grep -q 'amiforensics.compare.kv/1' src/compare.c
+	@grep -q 'change.modified' src/compare.c
 	@echo "static checks: PASS"
 
 clean:
