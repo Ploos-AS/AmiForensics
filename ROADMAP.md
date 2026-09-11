@@ -107,10 +107,20 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 - per-collection `index.json`
 - collection metadata recorded in the run manifest
 
+### M5.4 Snapshot comparison — implemented
+
+- normalized pre/post diff schema
+- per-tree added/removed/modified separation
+- before/after metadata for modified files
+- aggregate change summary
+- content comparison based on SHA-256 plus size
+- diff path recorded in the run manifest
+- stable workstation input for M6 Compare/Report
+
 ### Next
 
-- M5.4 snapshot comparison / analysis-session diff foundation
-- optional Ghidra integration
+- M5.5 optional Ghidra integration foundation
+- M6 Compare/Report and normalized reporting workflow
 
 ## M6 — Reporting and automation
 
