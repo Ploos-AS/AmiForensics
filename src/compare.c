@@ -32,6 +32,22 @@ static int find_key(const CMPSnapshot *s, const char *key)
     return -1;
 }
 
+static int copy_field(char *dst, size_t dst_size, const char *src)
+{
+    size_t n = strlen(src);
+    if (n >= dst_size) return 0;
+    memcpy(dst, src, n + 1U);
+    return 1;
+}
+
+static void discard_line_tail(FILE *fp)
+{
+    int ch;
+    do {
+        ch = fgetc(fp);
+    } while (ch != '\n' && ch != EOF);
+}
+
 static int load_snapshot(const char *path, CMPSnapshot *s)
 {
     FILE *fp;
@@ -41,6 +57,15 @@ static int load_snapshot(const char *path, CMPSnapshot *s)
     if (fp == NULL) return 20;
     while (fgets(line, sizeof(line), fp) != NULL) {
         char *eq;
+        size_t line_len = strlen(line);
+        int complete_line = (line_len > 0U && line[line_len - 1U] == '\n');
+
+        if (!complete_line && !feof(fp)) {
+            s->truncated = 1;
+            discard_line_tail(fp);
+            continue;
+        }
+
         trim_line(line);
         if (line[0] == '\0' || line[0] == '#') continue;
         eq = strchr(line, '=');
@@ -48,10 +73,11 @@ static int load_snapshot(const char *path, CMPSnapshot *s)
         *eq++ = '\0';
         if (find_key(s, line) >= 0) continue;
         if (s->count >= CMP_MAX_RECORDS) { s->truncated = 1; continue; }
-        strncpy(s->records[s->count].key, line, CMP_KEY_LEN - 1U);
-        s->records[s->count].key[CMP_KEY_LEN - 1U] = '\0';
-        strncpy(s->records[s->count].value, eq, CMP_VALUE_LEN - 1U);
-        s->records[s->count].value[CMP_VALUE_LEN - 1U] = '\0';
+        if (!copy_field(s->records[s->count].key, CMP_KEY_LEN, line) ||
+            !copy_field(s->records[s->count].value, CMP_VALUE_LEN, eq)) {
+            s->truncated = 1;
+            continue;
+        }
         s->count++;
     }
     if (ferror(fp)) { fclose(fp); return 20; }
