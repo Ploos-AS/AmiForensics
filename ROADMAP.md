@@ -143,7 +143,7 @@ Status: **CLOSED — host-side CI qualification PASS**
 
 ## M6 — Reporting and automation
 
-### M6.1 Compare — implemented
+### M6.1 Compare — CLOSED / CI qualification PASS
 
 - native AmigaOS 2.04+ / 68000-compatible `Compare` CLI
 - compares bounded key/value snapshots without executing samples
@@ -151,10 +151,12 @@ Status: **CLOSED — host-side CI qualification PASS**
 - human-readable output and normalized `amiforensics.compare.kv/1` output
 - before/after values retained for modified fields
 - bounded record storage and explicit truncation status
+- qualification harness: `tools/qualify_m6_1.py`
+- qualification record: `docs/M6_1_QUALIFICATION.md`
+- GitHub Actions run 34560817369 completed successfully
 
 ### Next
 
-- qualify M6.1 Compare
 - M6.2 Report
 - normalized JSON/report schema
 - ARexx automation where useful
