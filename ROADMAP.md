@@ -155,11 +155,21 @@ Status: **CLOSED — host-side CI qualification PASS**
 - qualification record: `docs/M6_1_QUALIFICATION.md`
 - GitHub Actions run 34560817369 completed successfully
 
+### M6.2 Report — CLOSED / CI qualification PASS
+
+- native AmigaOS 2.04+ / 68000-compatible `Report` CLI
+- aggregates bounded normalized key/value sources
+- human-readable source summary and normalized `amiforensics.report.kv/1` output
+- source tool/schema metadata and warning accounting
+- bounded source/record storage with explicit truncation status
+- qualification harness: `tools/qualify_m6_2.py`
+- qualification record: `docs/M6_2_QUALIFICATION.md`
+- GitHub Actions run 34561039788 completed successfully
+
 ### Next
 
-- M6.2 Report
-- normalized JSON/report schema
-- ARexx automation where useful
+- M6.3 ARexx automation
+- normalized JSON/report schema on workstation side
 - batch-analysis workflow
 
 ## Initial release target
