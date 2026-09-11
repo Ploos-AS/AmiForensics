@@ -80,7 +80,7 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 
 ## M5 — Analysis workstation
 
-Status: **IMPLEMENTED — qualification pending**
+Status: **IMPLEMENTED — CI qualification running**
 
 ### M5.1 Workstation foundation — implemented
 
@@ -129,9 +129,20 @@ Status: **IMPLEMENTED — qualification pending**
 - static analysis only; sample is never executed
 - log, state and return code recorded in the run manifest
 
+### M5.6 Workstation qualification — implemented, CI result pending
+
+- reproducible host-side qualification harness in `workstation/qualify_m5.py`
+- validates immutable sample preparation and manifest schema
+- validates network-disabled FS-UAE profile rendering
+- validates FS-UAE dry-run without emulator start
+- validates pre/post snapshots, explicit artifact collection, and snapshot diff
+- validates Ghidra dry-run using a fake `analyzeHeadless`; no Ghidra analysis is executed
+- validates no dynamic sample execution is enabled
+- dedicated GitHub Actions workflow on workstation changes
+
 ### Next
 
-- qualify the M5 workstation workflow end-to-end
+- record M5 qualification result once CI completes successfully
 - M6 Compare/Report and normalized reporting workflow
 
 ## M6 — Reporting and automation
