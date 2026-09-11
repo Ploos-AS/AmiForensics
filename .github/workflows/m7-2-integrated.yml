@@ -9,6 +9,9 @@ on:
       - "workstation/**"
       - "tools/**"
       - "docs/RELEASE_v0.1.0.md"
+      - "docs/M7_2_QUALIFICATION.md"
+      - "ROADMAP.md"
+      - "README.md"
       - "Makefile"
       - ".github/workflows/m7-2-integrated.yml"
   pull_request:
