@@ -1,0 +1,35 @@
+name: M5 workstation qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workstation/**'
+      - '.github/workflows/m5-workstation-qualification.yml'
+  pull_request:
+    paths:
+      - 'workstation/**'
+      - '.github/workflows/m5-workstation-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile workstation Python
+        run: python -m compileall -q workstation
+
+      - name: Qualify M5 workstation flow
+        run: python workstation/qualify_m5.py
