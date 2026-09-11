@@ -12,6 +12,7 @@ This directory contains the host-side orchestration layer for controlled Amiga m
 - predictable artifact locations for later Compare/Report integration
 - FS-UAE remains an external dependency; ROMs and copyrighted system files are never bundled
 - the workstation does not auto-execute samples
+- optional Ghidra integration is static-only and never executes the sample
 
 ## Run layout
 
@@ -19,9 +20,10 @@ A prepared run is created under `workstation/runs/<run-id>/`:
 
 - `input/` — copied sample
 - `artifacts/` — collected guest/host output
-- `logs/` — orchestration and emulator logs
+- `logs/` — orchestration, emulator and optional Ghidra logs
 - `profile/` — rendered emulator profile
 - `snapshots/` — normalized pre/post workstation snapshots and diff
+- `ghidra/` — optional disposable Ghidra project
 - `manifest.json` — normalized run metadata
 
 ## M5.1 — Workstation foundation
@@ -109,3 +111,28 @@ For each tracked tree (`artifacts`, `logs`, `profile`) the diff separates:
 - unchanged file count
 
 A top-level summary provides aggregate added/removed/modified/unchanged counts. Content changes are determined from SHA-256 plus size rather than timestamps alone. The schema `amiforensics.workstation.snapshot-diff/1` is intended as stable host-side input for the native/host `Compare` and `Report` work in M6.
+
+## M5.5 — Optional Ghidra integration
+
+Ghidra is an optional external dependency. AmiForensics does not download or bundle it.
+
+Review the headless import command without starting Ghidra:
+
+```sh
+python3 workstation/ghidra_import.py \
+  /tmp/amiforensics-runs/<run-id> \
+  --ghidra-home /opt/ghidra
+```
+
+`GHIDRA_HOME` or an `analyzeHeadless` executable on `PATH` can be used instead of `--ghidra-home`.
+
+After reviewing the command, explicitly start static headless analysis:
+
+```sh
+python3 workstation/ghidra_import.py \
+  /tmp/amiforensics-runs/<run-id> \
+  --ghidra-home /opt/ghidra \
+  --analyze
+```
+
+The integration imports only the immutable sample copy from the prepared run. It creates a disposable project below `ghidra/`, writes Ghidra output to `logs/ghidra.log`, records state and return code in `manifest.json`, and never executes the sample.
