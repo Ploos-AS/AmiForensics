@@ -1,0 +1,22 @@
+name: M6.5 batch qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workstation/batch_prepare.py"
+      - "workstation/prepare_run.py"
+      - "workstation/qualify_m6_5.py"
+      - ".github/workflows/m6-5-batch.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qualify M6.5 batch preparation
+        run: python3 workstation/qualify_m6_5.py
