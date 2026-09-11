@@ -80,7 +80,7 @@ Real Commodore AmigaOS qualification remains separate and is not implied by AROS
 
 ## M5 — Analysis workstation
 
-Status: **IMPLEMENTED — CI qualification running**
+Status: **CLOSED — host-side CI qualification PASS**
 
 ### M5.1 Workstation foundation — implemented
 
@@ -129,7 +129,7 @@ Status: **IMPLEMENTED — CI qualification running**
 - static analysis only; sample is never executed
 - log, state and return code recorded in the run manifest
 
-### M5.6 Workstation qualification — implemented, CI result pending
+### M5.6 Workstation qualification — PASS
 
 - reproducible host-side qualification harness in `workstation/qualify_m5.py`
 - validates immutable sample preparation and manifest schema
@@ -138,18 +138,25 @@ Status: **IMPLEMENTED — CI qualification running**
 - validates pre/post snapshots, explicit artifact collection, and snapshot diff
 - validates Ghidra dry-run using a fake `analyzeHeadless`; no Ghidra analysis is executed
 - validates no dynamic sample execution is enabled
-- dedicated GitHub Actions workflow on workstation changes
-
-### Next
-
-- record M5 qualification result once CI completes successfully
-- M6 Compare/Report and normalized reporting workflow
+- dedicated GitHub Actions workflow
+- GitHub Actions run 34554439869 completed successfully
 
 ## M6 — Reporting and automation
 
-- Compare
-- Report
-- normalized JSON schema
+### M6.1 Compare — implemented
+
+- native AmigaOS 2.04+ / 68000-compatible `Compare` CLI
+- compares bounded key/value snapshots without executing samples
+- reports added, removed, modified and unchanged fields
+- human-readable output and normalized `amiforensics.compare.kv/1` output
+- before/after values retained for modified fields
+- bounded record storage and explicit truncation status
+
+### Next
+
+- qualify M6.1 Compare
+- M6.2 Report
+- normalized JSON/report schema
 - ARexx automation where useful
 - batch-analysis workflow
 
