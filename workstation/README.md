@@ -21,7 +21,7 @@ A prepared run is created under `workstation/runs/<run-id>/`:
 - `artifacts/` — collected guest/host output
 - `logs/` — orchestration and emulator logs
 - `profile/` — rendered emulator profile
-- `snapshots/` — normalized pre/post workstation snapshots
+- `snapshots/` — normalized pre/post workstation snapshots and diff
 - `manifest.json` — normalized run metadata
 
 ## M5.1 — Workstation foundation
@@ -78,7 +78,7 @@ After the controlled analysis session, capture the post-analysis state:
 python3 workstation/snapshot.py /tmp/amiforensics-runs/<run-id> post
 ```
 
-Snapshots inventory workstation-visible `artifacts/`, `logs/` and `profile/` trees with size, timestamp and SHA-256 metadata. They are intended as stable input for the future `Compare` tool.
+Snapshots inventory workstation-visible `artifacts/`, `logs/` and `profile/` trees with size, timestamp and SHA-256 metadata.
 
 Collect only explicitly selected files:
 
@@ -90,3 +90,22 @@ python3 workstation/collect_artifacts.py \
 ```
 
 Collected files are copied below `artifacts/<label>/`, made read-only, hashed with SHA-256 and described by an `index.json`. The run manifest records each collection. The collector never recursively sweeps arbitrary host directories and does not execute collected files.
+
+## M5.4 — Snapshot comparison
+
+After both snapshots exist, generate a normalized diff:
+
+```sh
+python3 workstation/compare_snapshots.py /tmp/amiforensics-runs/<run-id>
+```
+
+The command writes `snapshots/diff.json` and records it as `snapshot_diff` in `manifest.json`.
+
+For each tracked tree (`artifacts`, `logs`, `profile`) the diff separates:
+
+- added files
+- removed files
+- modified files, including before/after metadata
+- unchanged file count
+
+A top-level summary provides aggregate added/removed/modified/unchanged counts. Content changes are determined from SHA-256 plus size rather than timestamps alone. The schema `amiforensics.workstation.snapshot-diff/1` is intended as stable host-side input for the native/host `Compare` and `Report` work in M6.
