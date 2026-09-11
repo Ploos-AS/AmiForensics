@@ -2,9 +2,20 @@ CC = m68k-amigaos-gcc
 CFLAGS ?= -O2 -Wall -Wextra -m68000
 LDFLAGS ?=
 
+VERSION ?= 0.1.0
 TARGETS := FileInfo Strings HunkInfo BootInfo ResidentView PatchView TaskView ProcessView PortView MemScan SampleDump TraceExec DiskWatch Compare Report
 
-.PHONY: all clean check
+DESTDIR ?=
+PREFIX ?= /AmiForensics
+BINDIR ?= $(PREFIX)/C
+REXXDIR ?= $(PREFIX)/Rexx
+DOCDIR ?= $(PREFIX)/Docs
+DISTDIR ?= dist
+PACKAGE_NAME := AmiForensics-v$(VERSION)
+PACKAGE_DIR := $(DISTDIR)/$(PACKAGE_NAME)
+PACKAGE_ARCHIVE := $(DISTDIR)/$(PACKAGE_NAME).tar.gz
+
+.PHONY: all clean check install package package-stage package-check
 
 all: $(TARGETS)
 
@@ -114,5 +125,29 @@ check:
 	@grep -q 'source.count' src/report.c
 	@echo "static checks: PASS"
 
+install: all
+	mkdir -p "$(DESTDIR)$(BINDIR)" "$(DESTDIR)$(REXXDIR)" "$(DESTDIR)$(DOCDIR)"
+	cp $(TARGETS) "$(DESTDIR)$(BINDIR)/"
+	cp rexx/AFReport.rexx "$(DESTDIR)$(REXXDIR)/"
+	cp README.md ROADMAP.md LICENSE "$(DESTDIR)$(DOCDIR)/"
+
+package-stage: all check
+	rm -rf "$(PACKAGE_DIR)"
+	mkdir -p "$(PACKAGE_DIR)/C" "$(PACKAGE_DIR)/Rexx" "$(PACKAGE_DIR)/Docs"
+	cp $(TARGETS) "$(PACKAGE_DIR)/C/"
+	cp rexx/AFReport.rexx "$(PACKAGE_DIR)/Rexx/"
+	cp README.md ROADMAP.md LICENSE docs/RELEASE_v0.1.0.md "$(PACKAGE_DIR)/Docs/"
+
+package-check: package-stage
+	@test $$(find "$(PACKAGE_DIR)/C" -maxdepth 1 -type f | wc -l) -eq 15
+	@test -f "$(PACKAGE_DIR)/Rexx/AFReport.rexx"
+	@test -f "$(PACKAGE_DIR)/Docs/RELEASE_v0.1.0.md"
+	@echo "package checks: PASS"
+
+package: package-check
+	tar -C "$(DISTDIR)" -czf "$(PACKAGE_ARCHIVE)" "$(PACKAGE_NAME)"
+	@echo "package: $(PACKAGE_ARCHIVE)"
+
 clean:
 	rm -f $(TARGETS)
+	rm -rf "$(DISTDIR)"
