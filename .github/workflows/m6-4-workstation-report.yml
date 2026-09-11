@@ -1,0 +1,21 @@
+name: M6.4 workstation report qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workstation/report.py"
+      - "workstation/qualify_m6_4.py"
+      - ".github/workflows/m6-4-workstation-report.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qualify M6.4 workstation JSON report
+        run: python3 workstation/qualify_m6_4.py
