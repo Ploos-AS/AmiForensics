@@ -1,6 +1,10 @@
 # M7.2b Batch 1 qualification
 
-Status: **PENDING LOCAL COMMODORE AMIGAOS RUNTIME**
+Status: **READY FOR LOCAL COMMODORE AMIGAOS RUNTIME**
+
+Runbook: `docs/M7_2B_BATCH1_RUNBOOK.md`
+
+Staging helper: `tools/prepare_m7_2b_batch1.py`
 
 ## Tools
 
